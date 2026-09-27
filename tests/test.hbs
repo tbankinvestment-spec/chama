@@ -1,0 +1,216 @@
+<div style="max-width: 1200px; margin: 0 auto; padding: 10px;">
+    <!-- Top Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+        <div>
+            <h1 style="font-size: 26px; color: #1a202c; margin-bottom: 4px;">🔍 Live Database & Data Structure Inspector</h1>
+            <p style="color: #718096; font-size: 14px;">
+                Aggregated live snapshot from MongoDB, Redis, Express Session &middot; Timestamp: <code>{{data.timestamp}}</code>
+            </p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <a href="/test?format=json" target="_blank" style="padding: 8px 14px; background: #edf2f7; color: #2d3748; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                <span>{ }</span> Raw JSON Feed
+            </a>
+            <button onclick="window.location.reload()" style="padding: 8px 14px; background: #319795; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                ↻ Refresh Live
+            </button>
+        </div>
+    </div>
+
+    <!-- Status Cards Bar (Database & Session First) -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px;">
+        <!-- MongoDB Badge -->
+        <div style="background: #fff; padding: 18px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border-left: 4px solid {{#if data.mongo.connected}}#38a169{{else}}#e53e3e{{/if}};">
+            <div style="font-size: 12px; font-weight: 700; color: #718096; text-transform: uppercase;">MongoDB Database</div>
+            <div style="font-size: 20px; font-weight: 700; color: #1a202c; margin: 4px 0;">
+                {{#if data.mongo.connected}}🟢 Connected{{else}}🔴 Disconnected{{/if}}
+            </div>
+            <div style="font-size: 12px; color: #718096;">
+                DB: <strong>{{data.mongo.databaseName}}</strong> &middot; Collections: <strong>{{data.mongo.collections.length}}</strong>
+            </div>
+        </div>
+
+        <!-- Redis Badge -->
+        <div style="background: #fff; padding: 18px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border-left: 4px solid {{#if data.redis.connected}}#38a169{{else}}#d69e2e{{/if}};">
+            <div style="font-size: 12px; font-weight: 700; color: #718096; text-transform: uppercase;">Redis Cache & Anti-Flood</div>
+            <div style="font-size: 20px; font-weight: 700; color: #1a202c; margin: 4px 0;">
+                {{#if data.redis.connected}}🟢 Connected{{else}}🟡 In-Memory Store{{/if}}
+            </div>
+            <div style="font-size: 12px; color: #718096;">
+                Active Keys: <strong>{{data.redis.totalScannedKeys}}</strong> &middot; {{data.redis.clientUrl}}
+            </div>
+        </div>
+
+        <!-- Session Badge -->
+        <div style="background: #fff; padding: 18px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border-left: 4px solid {{#if data.session.user}}#3182ce{{else}}#a0aec0{{/if}};">
+            <div style="font-size: 12px; font-weight: 700; color: #718096; text-transform: uppercase;">Session State</div>
+            <div style="font-size: 20px; font-weight: 700; color: #1a202c; margin: 4px 0;">
+                {{#if data.session.user}}👤 Logged In{{else}}⚪ Guest Session{{/if}}
+            </div>
+            <div style="font-size: 12px; color: #718096;">
+                {{#if data.session.user}}{{data.session.user.name}}{{else}}No user logged in{{/if}}
+            </div>
+        </div>
+
+        <!-- Security Compliance Badge -->
+        <div style="background: #fff; padding: 18px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border-left: 4px solid {{#if data.security.summary.compliant}}#38a169{{else}}#e53e3e{{/if}};">
+            <div style="font-size: 12px; font-weight: 700; color: #718096; text-transform: uppercase;">Security Compliance</div>
+            <div style="font-size: 20px; font-weight: 700; color: #1a202c; margin: 4px 0;">
+                🛡️ {{data.security.summary.securityScore}}% Pass
+            </div>
+            <div style="font-size: 12px; color: #718096;">
+                {{data.security.summary.passed}} Passed &middot; {{data.security.summary.warnings}} Warn &middot; {{data.security.summary.failed}} Risk
+            </div>
+        </div>
+    </div>
+
+    <!-- PRIMARY SECTION 1: MongoDB Collections Data Content (Prominently at Top) -->
+    <div style="background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 24px; overflow: hidden;">
+        <div style="padding: 18px 24px; border-bottom: 1px solid #edf2f7; display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+            <div>
+                <h2 style="font-size: 17px; font-weight: 700; color: #2d3748; margin-bottom: 2px;">📁 MongoDB Collections & Document Contents</h2>
+                <p style="font-size: 13px; color: #718096;">Live records currently stored in database collections</p>
+            </div>
+            <span style="font-size: 12px; background: #e2e8f0; color: #4a5568; padding: 4px 10px; border-radius: 12px; font-weight: 600;">
+                {{data.mongo.collections.length}} Active Collections
+            </span>
+        </div>
+
+        <div style="padding: 20px 24px;">
+            {{#if (eq data.mongo.collections.length 0)}}
+                <div style="padding: 24px; text-align: center; color: #718096; background: #f7fafc; border-radius: 8px;">
+                    <div style="font-size: 24px; margin-bottom: 8px;">📭</div>
+                    <strong>No collections or documents found in MongoDB yet.</strong>
+                    <p style="font-size: 13px; margin-top: 4px;">
+                        When users register via <code>/register</code> or create groups, documents will appear here.
+                    </p>
+                </div>
+            {{else}}
+                {{#each data.mongo.collections}}
+                    <div style="margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                        <div style="background: #edf2f7; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                            <div>
+                                <strong style="color: #2b6cb0;">Collection: {{this.name}}</strong>
+                            </div>
+                            <div>
+                                <span style="background: #fff; padding: 3px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; color: #4a5568;">
+                                    {{this.documentCount}} record(s)
+                                </span>
+                            </div>
+                        </div>
+                        <div style="padding: 12px 16px; background: #1a202c; overflow-x: auto;">
+                            <pre style="margin: 0; font-family: Consolas, monospace; font-size: 12px; color: #68d391; line-height: 1.4;">{{json this.sampleDocuments}}</pre>
+                        </div>
+                    </div>
+                {{/each}}
+            {{/if}}
+        </div>
+    </div>
+
+    <!-- PRIMARY SECTION 2: Session & Redis State Inspector -->
+    <div style="background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 24px; overflow: hidden;">
+        <div style="padding: 18px 24px; border-bottom: 1px solid #edf2f7; background: #fafafa;">
+            <h2 style="font-size: 17px; font-weight: 700; color: #2d3748; margin-bottom: 2px;">⚡ Session & Redis State Inspector</h2>
+            <p style="font-size: 13px; color: #718096;">Session contents, pending registration OTPs, and Redis cache keys</p>
+        </div>
+
+        <div style="padding: 20px 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
+            <!-- Current Session Data -->
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <div style="background: #edf2f7; padding: 10px 16px; font-weight: 600; font-size: 13px; color: #4a5568;">
+                    Current User Session (ID: <code>{{data.session.sessionID}}</code>)
+                </div>
+                <div style="padding: 12px 16px; background: #1a202c; overflow-x: auto;">
+                    <pre style="margin: 0; font-family: Consolas, monospace; font-size: 12px; color: #90cdf4; line-height: 1.4;">{{json data.session.fullSessionContent}}</pre>
+                </div>
+            </div>
+
+            <!-- Redis Keys & Anti-Flood State -->
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                <div style="background: #edf2f7; padding: 10px 16px; font-weight: 600; font-size: 13px; color: #4a5568; display: flex; justify-content: space-between;">
+                    <span>Redis Cache & Rate-Limit Keys</span>
+                    <span>{{data.redis.keys.length}} Active</span>
+                </div>
+                <div style="padding: 12px 16px; background: #1a202c; overflow-x: auto; max-height: 250px;">
+                    {{#if (eq data.redis.keys.length 0)}}
+                        <div style="color: #a0aec0; font-size: 12px; font-style: italic;">
+                            No active keys in Redis or Redis is running in local in-memory fallback.
+                        </div>
+                    {{else}}
+                        <pre style="margin: 0; font-family: Consolas, monospace; font-size: 12px; color: #fbd38d; line-height: 1.4;">{{json data.redis.keys}}</pre>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 3: Data Leakage & Security Vulnerability Audit (Placed Below Data Content) -->
+    <div style="background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 24px; overflow: hidden;">
+        <div style="padding: 18px 24px; border-bottom: 1px solid #edf2f7; display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+            <div>
+                <h2 style="font-size: 17px; font-weight: 700; color: #2d3748; margin-bottom: 2px;">🛡️ Data Leakage & Security Vulnerability Audit</h2>
+                <p style="font-size: 13px; color: #718096;">Static code scan, secrets exposure checks, cookie theft protection & compliance</p>
+            </div>
+            <span style="font-size: 13px; font-weight: 700; padding: 6px 12px; border-radius: 12px;
+                {{#if data.security.summary.compliant}}background: #c6f6d5; color: #22543d;{{else}}background: #fed7d7; color: #742a2a;{{/if}}">
+                {{#if data.security.summary.compliant}}✓ COMPLIANT ({{data.security.summary.securityScore}}%){{else}}✗ RISKS DETECTED ({{data.security.summary.failed}}){{/if}}
+            </span>
+        </div>
+
+        <div style="padding: 20px 24px;">
+            <div style="display: grid; gap: 12px;">
+                {{#each data.security.checks}}
+                    <div style="padding: 14px 18px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+                        {{#if (eq this.status 'PASS')}}background: #f0fff4; border-color: #c6f6d5;
+                        {{else if (eq this.status 'WARN')}}background: #fffaf0; border-color: #feebc8;
+                        {{else}}background: #fff5f5; border-color: #fed7d7;{{/if}}">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                <strong style="font-size: 14px; color: #2d3748;">{{this.title}}</strong>
+                                <span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 600; text-transform: uppercase;
+                                    {{#if (eq this.status 'PASS')}}background: #38a169; color: #fff;
+                                    {{else if (eq this.status 'WARN')}}background: #dd6b20; color: #fff;
+                                    {{else}}background: #e53e3e; color: #fff;{{/if}}">
+                                    {{this.status}}
+                                </span>
+                                <span style="font-size: 11px; color: #718096; background: #fff; border: 1px solid #e2e8f0; padding: 2px 6px; border-radius: 4px;">
+                                    {{this.category}}
+                                </span>
+                            </div>
+                            <div style="font-size: 13px; color: #4a5568;">
+                                {{this.message}}
+                            </div>
+                            {{#if this.remediation}}
+                                <div style="font-size: 12px; color: #c53030; margin-top: 6px; font-weight: 500;">
+                                    💡 <strong>Remediation:</strong> {{this.remediation}}
+                                </div>
+                            {{/if}}
+                        </div>
+                        <div style="text-align: right; min-width: 80px;">
+                            <span style="font-size: 11px; font-weight: 600; color: #718096; text-transform: uppercase;">
+                                Severity: {{this.severity}}
+                            </span>
+                        </div>
+                    </div>
+                {{/each}}
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 4: Entire Aggregated JSON Structure -->
+    <div style="background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); overflow: hidden; margin-bottom: 24px;">
+        <details style="padding: 18px 24px;">
+            <summary style="font-size: 16px; font-weight: 700; color: #2d3748; cursor: pointer; user-select: none;">
+                📋 Click to expand entire raw data structure (JSON)
+            </summary>
+            <div style="margin-top: 14px; position: relative;">
+                <button onclick="navigator.clipboard.writeText(document.getElementById('raw-json').innerText); alert('Copied JSON to clipboard!');" style="position: absolute; right: 12px; top: 12px; background: #4a5568; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                    Copy JSON
+                </button>
+                <div style="background: #1a202c; padding: 16px; border-radius: 8px; overflow-x: auto; max-height: 400px;">
+                    <pre id="raw-json" style="margin: 0; font-family: Consolas, monospace; font-size: 12px; color: #e2e8f0; line-height: 1.4;">{{jsonData}}</pre>
+                </div>
+            </div>
+        </details>
+    </div>
+</div>

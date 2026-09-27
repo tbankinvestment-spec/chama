@@ -1,0 +1,737 @@
+<div style="max-width: 440px; margin: 40px auto;">
+    <div style="background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%); padding: 30px; text-align: center; color: #fff;">
+            <h1 id="authTitle" style="font-size: 26px; margin-bottom: 6px;">
+                {{#if isRegister}}Create Account{{else}}Welcome Back{{/if}}
+            </h1>
+            <p id="authSubtitle" style="opacity: 0.85; font-size: 14px;">
+                {{#if isRegister}}Join your Chama group and start saving{{else}}Sign in to access your Chama dashboard{{/if}}
+            </p>
+        </div>
+
+        <div style="padding: 32px;">
+            {{#if messages.loginSuccess}}
+                <div style="background: #e6fffa; border: 1.5px solid #38b2ac; color: #234e52; padding: 12px 14px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 16px;">✅</span>
+                    <span>{{messages.loginSuccess}}</span>
+                </div>
+            {{/if}}
+            {{#if errors.workflow}}
+                <div style="background: #fff5f5; border: 1.5px solid #fc8181; color: #c53030; padding: 12px 14px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 16px;">⚠️</span>
+                    <span>{{errors.workflow}}</span>
+                </div>
+            {{/if}}
+            {{#if errors.forgotPin}}
+                <div style="background: #fff5f5; border: 1.5px solid #fc8181; color: #c53030; padding: 12px 14px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 16px;">⚠️</span>
+                    <span>{{errors.forgotPin}}</span>
+                </div>
+            {{/if}}
+            {{#if isRegister}}
+                <form id="registerForm" method="POST" action="/register" style="display: flex; flex-direction: column; gap: 14px;" onsubmit="return validateRegisterForm(event)">
+                    <div>
+                        <label style="display: block; font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 6px;">Full Name</label>
+                        <input type="text" name="name" id="fullNameInput" required placeholder="Jane Mwangi" value="{{formData.name}}"
+                            autocomplete="name" maxlength="70" spellcheck="false"
+                            style="width: 100%; padding: 11px 14px; border: 1.5px solid {{#if errors.name}}#fc8181{{else}}#e2e8f0{{/if}}; border-radius: 8px; font-size: 15px; outline: none; transition: border-color 0.2s;"
+                            onfocus="this.style.borderColor='#4fd1c5'"
+                            onblur="this.style.borderColor=hasTwoNames(this.value)?'#e2e8f0':'#fc8181'">
+                        <p id="nameError" style="margin: 4px 2px 0 2px; font-size: 13px; color: #e53e3e;">{{errors.name}}</p>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 6px;">Email Address</label>
+                        <input type="email" name="email" required placeholder="enter name@gmail.com" value="{{formData.email}}"
+                            autocomplete="email" maxlength="100" spellcheck="false" autocapitalize="off"
+                            style="width: 100%; padding: 11px 14px; border: 1.5px solid {{#if errors.email}}#fc8181{{else}}#e2e8f0{{/if}}; border-radius: 8px; font-size: 15px; outline: none; transition: border-color 0.2s;"
+                            onfocus="this.style.borderColor='#4fd1c5'" onblur="this.style.borderColor='#e2e8f0'">
+                        {{#if errors.email}}<p style="margin: 4px 2px 0 2px; font-size: 13px; color: #e53e3e;">{{errors.email}}</p>{{/if}}
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 6px;">Phone Number</label>
+                        <div style="display: flex; gap: 10px; align-items: flex-start;">
+                            <div style="width: 90px;">
+                                <input type="text" name="countryCode" value="{{#if formData.countryCode}}{{formData.countryCode}}{{else}}+254{{/if}}" readonly tabindex="-1"
+                                    style="width: 100%; height: 44px; padding: 0 12px; box-sizing: border-box; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 15px; line-height: 44px; outline: none; background: #f7fafc; color: #4a5568; text-align: center; cursor: not-allowed;">
+                            </div>
+                            <div style="flex: 1;">
+                                <input type="tel" name="phone" id="phoneInput" placeholder="Enter phone number" inputmode="numeric" value="{{formData.phone}}"
+                                    autocomplete="tel" maxlength="15" spellcheck="false" autocorrect="off"
+                                    style="width: 100%; height: 44px; padding: 0 14px; box-sizing: border-box; border: 1.5px solid {{#if errors.phone}}#fc8181{{else}}#e2e8f0{{/if}}; border-radius: 8px; font-size: 15px; line-height: 44px; outline: none; transition: border-color 0.2s;"
+                                    onfocus="this.style.borderColor='#4fd1c5'"
+                                    onblur="this.style.borderColor=validateKePhone(this.value)?'#e2e8f0':'#fc8181'; showPhoneError(this.value)"
+                                    onkeydown="return restrictPhoneKeys(event)"
+                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                                <p id="phoneError" style="margin: 4px 2px 0 2px; font-size: 13px; color: #e53e3e;">{{errors.phone}}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 6px;">Create Pin</label>
+                        <div style="display: flex; gap: 10px; align-items: flex-start;">
+                            <div style="flex: 1;">
+                                <input type="password" name="password" id="pinInput" required maxlength="4" inputmode="numeric" placeholder="4-digit pin"
+                                    autocomplete="new-password" spellcheck="false" autocorrect="off" autocapitalize="off"
+                                    style="width: 100%; height: 44px; padding: 0 14px; box-sizing: border-box; border: 1.5px solid {{#if errors.pin}}#fc8181{{else}}#e2e8f0{{/if}}; border-radius: 8px; font-size: 15px; line-height: 44px; letter-spacing: normal; text-align: left; outline: none; transition: border-color 0.2s;"
+                                    onfocus="this.style.borderColor='#4fd1c5'"
+                                    onblur="this.style.borderColor=this.value.length===4?'#e2e8f0':'#fc8181'"
+                                    onkeydown="return restrictPinKeys(event)"
+                                    oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,4); showPinStatus()">
+                            </div>
+                            <div style="flex: 1;">
+                                <input type="password" name="confirmPassword" id="confirmPinInput" required maxlength="4" inputmode="numeric" placeholder="confirm pin"
+                                    autocomplete="new-password" spellcheck="false" autocorrect="off" autocapitalize="off"
+                                    style="width: 100%; height: 44px; padding: 0 14px; box-sizing: border-box; border: 1.5px solid {{#if errors.pin}}#fc8181{{else}}#e2e8f0{{/if}}; border-radius: 8px; font-size: 15px; line-height: 44px; letter-spacing: normal; text-align: left; outline: none; transition: border-color 0.2s;"
+                                    onfocus="this.style.borderColor='#4fd1c5'"
+                                    onkeydown="return restrictPinKeys(event)"
+                                    oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,4); showPinStatus()">
+                            </div>
+                        </div>
+                        <p id="pinError" style="margin: 4px 2px 0 2px; font-size: 13px; color: #e53e3e;">{{errors.pin}}</p>
+                    </div>
+
+                    <button type="submit" id="registerSubmitBtn"
+                        style="padding: 12px; background: linear-gradient(135deg, #38b2ac 0%, #319795 100%); color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s;"
+                        onmouseover="this.style.boxShadow='0 4px 12px rgba(56,178,172,0.4)'"
+                        onmouseout="this.style.boxShadow='none';this.style.transform='scale(1)'"
+                        onmousedown="this.style.transform='scale(0.98)'"
+                        onmouseup="this.style.transform='scale(1)'">
+                        verify account
+                    </button>
+                </form>
+
+                <p style="text-align: center; margin-top: 24px; font-size: 14px; color: #4a5568;">
+                    Already have an account?
+                    <a href="/login" style="color: #319795; font-weight: 600; text-decoration: none;">Sign in</a>
+                </p>
+            {{else}}
+                <form id="loginForm" method="POST" action="/login" style="display: flex; flex-direction: column; gap: 14px;" onsubmit="return validateLoginForm(event)">
+                    <div>
+                        <label style="display: block; font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 6px;">Phone Number</label>
+                        <div style="display: flex; gap: 10px; align-items: flex-start;">
+                            <div style="width: 90px;">
+                                <input type="text" name="countryCode" value="{{#if formData.countryCode}}{{formData.countryCode}}{{else}}+254{{/if}}" readonly tabindex="-1"
+                                    style="width: 100%; height: 44px; padding: 0 12px; box-sizing: border-box; border: 1.5px solid {{#if errors.phone}}#fc8181{{else}}#e2e8f0{{/if}}; border-radius: 8px; font-size: 15px; line-height: 44px; outline: none; background: #f7fafc; color: #4a5568; text-align: center; cursor: not-allowed;">
+                            </div>
+                            <div style="flex: 1;">
+                                <input type="tel" name="phone" id="loginPhoneInput" placeholder="Enter phone number" inputmode="numeric" value="{{formData.phone}}"
+                                    autocomplete="tel" maxlength="15" spellcheck="false" autocorrect="off"
+                                    style="width: 100%; height: 44px; padding: 0 14px; box-sizing: border-box; border: 1.5px solid {{#if errors.phone}}#fc8181{{else}}#e2e8f0{{/if}}; border-radius: 8px; font-size: 15px; line-height: 44px; outline: none; transition: border-color 0.2s;"
+                                    onfocus="this.style.borderColor='#4fd1c5'"
+                                    onblur="this.style.borderColor=validateKePhone(this.value)?'#e2e8f0':'#fc8181'; showLoginPhoneError(this.value)"
+                                    onkeydown="return restrictPhoneKeys(event)"
+                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                                <p id="loginPhoneError" style="margin: 4px 2px 0 2px; font-size: 13px; color: #e53e3e;">{{errors.phone}}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 6px;">Account PIN</label>
+                        <input type="password" name="password" id="loginPinInput" required maxlength="4" inputmode="numeric" placeholder="Enter 4-digit PIN"
+                            autocomplete="current-password" spellcheck="false" autocorrect="off" autocapitalize="off"
+                            style="width: 100%; height: 44px; padding: 0 14px; box-sizing: border-box; border: 1.5px solid {{#if errors.password}}#fc8181{{else if errors.pin}}#fc8181{{else}}#e2e8f0{{/if}}; border-radius: 8px; font-size: 15px; line-height: 44px; letter-spacing: normal; text-align: left; outline: none; transition: border-color 0.2s;"
+                            onfocus="this.style.borderColor='#4fd1c5'"
+                            onblur="this.style.borderColor=this.value.length===4?'#e2e8f0':'#fc8181'; showLoginPinError(this.value)"
+                            onkeydown="return restrictPinKeys(event)"
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,4); showLoginPinError(this.value)">
+                        <p id="loginPinError" style="margin: 4px 2px 0 2px; font-size: 13px; color: #e53e3e;">{{#if errors.password}}{{errors.password}}{{else}}{{errors.pin}}{{/if}}</p>
+                        {{#if errors.password}}
+                            <p style="margin: 6px 0 0 0; font-size: 12px; color: #c53030; font-weight: 600;">⚠️ Wrong PIN — please try again.</p>
+                        {{/if}}
+                    </div>
+
+                    <!-- Attempt counter -->
+                    {{#if attemptState}}
+                        <div style="background: {{#if attemptState.locked}}#fff5f5{{else}}#ebf8ff{{/if}}; border: 1.5px solid {{#if attemptState.locked}}#feb2b2{{else}}#bee3f8{{/if}}; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: {{#if attemptState.locked}}#c53030{{else}}#2c5282{{/if}};">
+                            {{#if attemptState.locked}}
+                                🔒 Account locked. Try again in {{attemptState.minutesLeft}} minute(s).
+                            {{else}}
+                                🔑 {{attemptState.remaining}} attempt(s) remaining before lockout ({{attemptState.max}} max).
+                            {{/if}}
+                        </div>
+                    {{/if}}
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="remember" style="width: 16px; height: 16px; accent-color: #319795; cursor: pointer;">
+                            <label for="remember" style="font-size: 14px; color: #4a5568; cursor: pointer;">Remember me on this device</label>
+                        </div>
+                        <a href="javascript:void(0)" id="forgotPinLink" onclick="showForgotPinSection()" style="font-size: 13px; color: #319795; font-weight: 600; text-decoration: none; cursor: pointer;">Forgot PIN?</a>
+                    </div>
+
+                    <button type="submit" id="loginSubmitBtn"
+                        style="padding: 12px; background: linear-gradient(135deg, #38b2ac 0%, #319795 100%); color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s;"
+                        onmouseover="this.style.boxShadow='0 4px 12px rgba(56,178,172,0.4)'"
+                        onmouseout="this.style.boxShadow='none';this.style.transform='scale(1)'"
+                        onmousedown="this.style.transform='scale(0.98)'"
+                        onmouseup="this.style.transform='scale(1)'">
+                        Sign In
+                    </button>
+                </form>
+
+                <!-- Forgot PIN Verification Panel -->
+                <div id="forgotPinSection" style="display: none; flex-direction: column; gap: 14px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
+                        <h2 style="font-size: 18px; font-weight: 700; color: #1e3a5f; margin: 0;">Verify Phone Number</h2>
+                        <a href="javascript:void(0)" onclick="hideForgotPinSection()" style="font-size: 13px; color: #718096; text-decoration: none; font-weight: 500;">✕ Cancel</a>
+                    </div>
+                    <p style="font-size: 13px; color: #718096; margin: 0 0 6px 0;">
+                        Enter your registered phone number to receive a verification passcode.
+                    </p>
+
+                    <div id="forgotAlertMsg" style="display: none; padding: 10px 14px; border-radius: 8px; font-size: 13px; line-height: 1.4;"></div>
+
+                    <div>
+                        <label style="display: block; font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 6px;">Phone Number</label>
+                        <div style="display: flex; gap: 10px; align-items: flex-start;">
+                            <div style="width: 90px;">
+                                <input type="text" id="forgotCountryCode" value="+254" readonly
+                                    style="width: 100%; height: 44px; padding: 0 12px; box-sizing: border-box; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 15px; line-height: 44px; outline: none; background: #f7fafc; color: #4a5568; text-align: center; cursor: not-allowed;">
+                            </div>
+                            <div style="flex: 1;">
+                                <input type="tel" id="forgotPhoneInput" placeholder="Enter phone number" inputmode="numeric" maxlength="15"
+                                    autocomplete="tel" spellcheck="false" autocorrect="off"
+                                    style="width: 100%; height: 44px; padding: 0 14px; box-sizing: border-box; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 15px; line-height: 44px; outline: none; transition: border-color 0.2s;"
+                                    onfocus="this.style.borderColor='#4fd1c5'"
+                                    onblur="this.style.borderColor=validateKePhone(this.value)?'#e2e8f0':'#fc8181'; showForgotPhoneError(this.value)"
+                                    onkeydown="return restrictPhoneKeys(event)"
+                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                                <p id="forgotPhoneError" style="margin: 4px 2px 0 2px; font-size: 13px; color: #e53e3e;"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" id="sendForgotCodeBtn" onclick="handleSendForgotCode()"
+                        style="width: 100%; padding: 12px; background: linear-gradient(135deg, #38b2ac 0%, #319795 100%); color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s;"
+                        onmouseover="this.style.boxShadow='0 4px 12px rgba(56,178,172,0.4)'"
+                        onmouseout="this.style.boxShadow='none';this.style.transform='scale(1)'"
+                        onmousedown="this.style.transform='scale(0.98)'"
+                        onmouseup="this.style.transform='scale(1)'">
+                        Send Code
+                    </button>
+
+                    <!-- Passcode input step displayed once code is sent -->
+                    <div id="forgotCodeContainer" style="display: none; flex-direction: column; gap: 10px; margin-top: 10px; padding-top: 16px; border-top: 1.5px dashed #e2e8f0;">
+                        <div>
+                            <label style="display: block; font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 6px;">Verification Passcode</label>
+                            <input type="text" id="passcodeInput" name="passcode" inputmode="numeric" maxlength="6" placeholder="passcode"
+                                autocomplete="one-time-code" spellcheck="false" autocorrect="off"
+                                style="width: 100%; height: 44px; padding: 0 14px; box-sizing: border-box; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 17px; letter-spacing: 4px; text-align: center; outline: none; transition: border-color 0.2s;"
+                                onfocus="this.style.borderColor='#4fd1c5'"
+                                onblur="this.style.borderColor=this.value.length>=4?'#e2e8f0':'#fc8181'"
+                                onkeydown="return restrictPasscodeKeys(event)"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,6); onPasscodeChange(this.value)">
+                            <p id="passcodeError" style="margin: 4px 2px 0 2px; font-size: 13px; color: #e53e3e;"></p>
+                        </div>
+
+                        <button type="button" id="verifyPasscodeBtn" onclick="handleVerifyPasscode()"
+                            style="width: 100%; padding: 12px; background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%); color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s;"
+                            onmouseover="this.style.boxShadow='0 4px 12px rgba(30,58,95,0.4)'"
+                            onmouseout="this.style.boxShadow='none';this.style.transform='scale(1)'"
+                            onmousedown="this.style.transform='scale(0.98)'"
+                            onmouseup="this.style.transform='scale(1)'">
+                            Verify Passcode
+                        </button>
+                    </div>
+
+                    <p style="text-align: center; margin-top: 10px; font-size: 13px; color: #4a5568;">
+                        <a href="javascript:void(0)" onclick="hideForgotPinSection()" style="color: #319795; font-weight: 600; text-decoration: none;">← Back to Sign In</a>
+                    </p>
+                </div>
+
+                <div id="orDivider" style="display: flex; align-items: center; gap: 12px; margin: 24px 0;">
+                    <div style="flex: 1; height: 1px; background: #e2e8f0;"></div>
+                    <span style="font-size: 12px; color: #a0aec0;">or</span>
+                    <div style="flex: 1; height: 1px; background: #e2e8f0;"></div>
+                </div>
+
+                <p id="newToChama" style="text-align: center; font-size: 14px; color: #4a5568;">
+                    New to Chama?
+                    <a href="/register" style="color: #319795; font-weight: 600; text-decoration: none;">Create an account</a>
+                </p>
+            {{/if}}
+        </div>
+    </div>
+
+    <p style="text-align: center; margin-top: 20px; font-size: 13px; color: #718096;">
+        By {{#if isRegister}}creating an account{{else}}signing in{{/if}}, you agree to our Terms of Service and Privacy Policy.
+    </p>
+</div>
+
+<script>
+function restrictPhoneKeys(e) {
+    var k = e.key;
+    if (e.ctrlKey || e.metaKey) return true;
+    if (['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Enter','Home','End'].includes(k)) return true;
+    if (/^[0-9]$/.test(k)) return true;
+    e.preventDefault();
+    return false;
+}
+
+function restrictPinKeys(e) {
+    var k = e.key;
+    if (e.ctrlKey || e.metaKey) return true;
+    if (['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Enter','Home','End'].includes(k)) return true;
+    if (/^[0-9]$/.test(k)) {
+        var target = e.target;
+        if (target && target.value && target.value.length >= 4) {
+            e.preventDefault();
+            return false;
+        }
+        return true;
+    }
+    e.preventDefault();
+    return false;
+}
+
+function hasTwoNames(value) {
+    if (!value || !value.trim()) return false;
+    var parts = value.trim().split(/\s+/);
+    return parts.length >= 2 && parts.every(function(p){ return p.length > 0; });
+}
+
+function validateKePhone(value) {
+    if (!value) return false;
+    var digits = value.replace(/\D/g, '');
+    if (digits.length === 0) return false;
+    if (digits.startsWith('0')) {
+        if (digits.length !== 10) return false;
+        if (!digits.startsWith('07') && !digits.startsWith('01')) return false;
+    } else {
+        if (digits.length !== 9) return false;
+        if (!digits.startsWith('7') && !digits.startsWith('1')) return false;
+    }
+    return true;
+}
+
+function getPhoneError(value) {
+    if (!value || value.trim() === '') return 'Phone number is required';
+    var digits = value.replace(/\D/g, '');
+    if (digits.length === 0) return 'Please enter only digits';
+    if (digits.startsWith('0')) {
+        if (digits.length !== 10) return 'Number starting with 0 must be exactly 10 digits (e.g., 0712345678)';
+        if (!digits.startsWith('07') && !digits.startsWith('01')) return 'Kenyan number starting with 0 must begin with 07 or 01';
+    } else {
+        if (digits.length !== 9) return 'Number without leading 0 must be exactly 9 digits (e.g., 712345678)';
+        if (!digits.startsWith('7') && !digits.startsWith('1')) return 'Kenyan number must begin with 7 or 1 (e.g., 712345678 or 112345678)';
+    }
+    return '';
+}
+
+function showPhoneError(value) {
+    var errEl = document.getElementById('phoneError');
+    if (!errEl) return;
+    if (!value) {
+        errEl.textContent = '';
+        return;
+    }
+    var msg = getPhoneError(value);
+    errEl.textContent = msg;
+}
+
+function showPinStatus() {
+    var p = document.getElementById('pinInput');
+    var c = document.getElementById('confirmPinInput');
+    var errEl = document.getElementById('pinError');
+    if (!p || !c || !errEl) return;
+
+    if (!p.value && !c.value) {
+        errEl.textContent = '';
+        p.style.borderColor = '#e2e8f0';
+        c.style.borderColor = '#e2e8f0';
+        return;
+    }
+    if (p.value.length < 4 && p.value.length > 0) {
+        errEl.textContent = 'PIN must be exactly 4 digits';
+        p.style.borderColor = '#fc8181';
+        c.style.borderColor = (c.value.length === 4) ? '#e2e8f0' : (c.value.length > 0 ? '#fc8181' : '#e2e8f0');
+        return;
+    }
+    if (c.value.length < 4 && c.value.length > 0) {
+        errEl.textContent = 'Confirm PIN must be exactly 4 digits';
+        p.style.borderColor = (p.value.length === 4) ? '#e2e8f0' : '#fc8181';
+        c.style.borderColor = '#fc8181';
+        return;
+    }
+    if (p.value.length === 4 && c.value.length === 4) {
+        if (p.value === c.value) {
+            errEl.textContent = '';
+            p.style.borderColor = '#48bb78';
+            c.style.borderColor = '#48bb78';
+        } else {
+            errEl.textContent = 'PIN mismatch';
+            p.style.borderColor = '#fc8181';
+            c.style.borderColor = '#fc8181';
+        }
+        return;
+    }
+    errEl.textContent = '';
+    if (p.style.borderColor === '#48bb78') p.style.borderColor = '#e2e8f0';
+    if (c.style.borderColor === '#48bb78') c.style.borderColor = '#e2e8f0';
+}
+
+function getPinError() {
+    var p = document.getElementById('pinInput');
+    var c = document.getElementById('confirmPinInput');
+    if (!p || !c) return '';
+    if (!p.value) return 'Create PIN is required';
+    if (p.value.length !== 4) return 'PIN must be exactly 4 digits';
+    if (!c.value) return 'Please confirm your PIN';
+    if (c.value.length !== 4) return 'Confirm PIN must be exactly 4 digits';
+    if (p.value !== c.value) return 'PIN mismatch';
+    return '';
+}
+
+function validateRegisterForm(event) {
+    var nameInput = document.getElementById('fullNameInput');
+    if (nameInput) {
+        var nameErr = document.getElementById('nameError');
+        if (!hasTwoNames(nameInput.value)) {
+            event.preventDefault();
+            if (nameErr) nameErr.textContent = 'Please enter at least two names (e.g., Jane Mwangi)';
+            nameInput.style.borderColor = '#fc8181';
+            nameInput.focus();
+            return false;
+        } else {
+            if (nameErr) nameErr.textContent = '';
+        }
+    }
+
+    var phoneInput = document.getElementById('phoneInput');
+    if (phoneInput) {
+        var value = phoneInput.value;
+        var msg = getPhoneError(value);
+        if (msg) {
+            event.preventDefault();
+            showPhoneError(value);
+            phoneInput.style.borderColor = '#fc8181';
+            phoneInput.focus();
+            return false;
+        }
+    }
+
+    var pinMsg = getPinError();
+    if (pinMsg) {
+        event.preventDefault();
+        showPinStatus();
+        var errEl = document.getElementById('pinError');
+        if (errEl) errEl.textContent = pinMsg;
+        var p = document.getElementById('pinInput');
+        var c = document.getElementById('confirmPinInput');
+        if (p) p.style.borderColor = '#fc8181';
+        if (c) c.style.borderColor = '#fc8181';
+        (p || c || {}).focus && (p || c).focus();
+        return false;
+    }
+
+    var submitBtn = document.getElementById('registerSubmitBtn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+    }
+    return true;
+}
+
+function getLoginPinError(value) {
+    if (!value || !value.trim()) return 'PIN is required';
+    var digits = value.replace(/\D/g, '');
+    if (digits.length !== 4) return 'PIN must be exactly 4 digits';
+    return '';
+}
+
+function showLoginPinError(value) {
+    var errEl = document.getElementById('loginPinError');
+    if (!errEl) return;
+    if (!value) {
+        errEl.textContent = '';
+        return;
+    }
+    var msg = getLoginPinError(value);
+    errEl.textContent = msg;
+}
+
+function showLoginPhoneError(value) {
+    var errEl = document.getElementById('loginPhoneError');
+    if (!errEl) return;
+    if (!value) {
+        errEl.textContent = '';
+        return;
+    }
+    var msg = getPhoneError(value);
+    errEl.textContent = msg;
+}
+
+function validateLoginForm(event) {
+    var phoneInput = document.getElementById('loginPhoneInput');
+    if (phoneInput) {
+        var value = phoneInput.value;
+        var msg = getPhoneError(value);
+        if (msg) {
+            event.preventDefault();
+            showLoginPhoneError(value);
+            phoneInput.style.borderColor = '#fc8181';
+            phoneInput.focus();
+            return false;
+        } else {
+            showLoginPhoneError('');
+            phoneInput.style.borderColor = '#e2e8f0';
+        }
+    }
+
+    var pinInput = document.getElementById('loginPinInput');
+    if (pinInput) {
+        var pinVal = pinInput.value;
+        var pinErr = getLoginPinError(pinVal);
+        if (pinErr) {
+            event.preventDefault();
+            showLoginPinError(pinVal);
+            pinInput.style.borderColor = '#fc8181';
+            pinInput.focus();
+            return false;
+        } else {
+            showLoginPinError('');
+            pinInput.style.borderColor = '#e2e8f0';
+        }
+    }
+
+    var submitBtn = document.getElementById('loginSubmitBtn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Signing in...';
+    }
+    return true;
+}
+
+/* ---------- Forgot PIN Workflow Client Script ---------- */
+
+function restrictPasscodeKeys(e) {
+    var k = e.key;
+    if (e.ctrlKey || e.metaKey) return true;
+    if (['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Enter','Home','End'].includes(k)) return true;
+    if (/^[0-9]$/.test(k)) {
+        var target = e.target;
+        if (target && target.value && target.value.length >= 6) {
+            e.preventDefault();
+            return false;
+        }
+        return true;
+    }
+    e.preventDefault();
+    return false;
+}
+
+function showForgotPinSection() {
+    var loginForm = document.getElementById('loginForm');
+    var forgotSec = document.getElementById('forgotPinSection');
+    var orDivider = document.getElementById('orDivider');
+    var newToChama = document.getElementById('newToChama');
+    var title = document.getElementById('authTitle');
+    var subtitle = document.getElementById('authSubtitle');
+
+    if (loginForm) loginForm.style.display = 'none';
+    if (orDivider) orDivider.style.display = 'none';
+    if (newToChama) newToChama.style.display = 'none';
+    if (forgotSec) forgotSec.style.display = 'flex';
+
+    if (title) title.textContent = 'Verify Phone Number';
+    if (subtitle) subtitle.textContent = 'Enter your phone number to receive a verification passcode';
+
+    // Auto-populate phone from login input if already typed
+    var loginPhone = document.getElementById('loginPhoneInput');
+    var forgotPhone = document.getElementById('forgotPhoneInput');
+    if (loginPhone && forgotPhone && loginPhone.value) {
+        forgotPhone.value = loginPhone.value.trim();
+    }
+    if (forgotPhone) forgotPhone.focus();
+}
+
+function hideForgotPinSection() {
+    var loginForm = document.getElementById('loginForm');
+    var forgotSec = document.getElementById('forgotPinSection');
+    var orDivider = document.getElementById('orDivider');
+    var newToChama = document.getElementById('newToChama');
+    var title = document.getElementById('authTitle');
+    var subtitle = document.getElementById('authSubtitle');
+
+    if (forgotSec) forgotSec.style.display = 'none';
+    if (loginForm) loginForm.style.display = 'flex';
+    if (orDivider) orDivider.style.display = 'flex';
+    if (newToChama) newToChama.style.display = 'block';
+
+    if (title) title.textContent = 'Welcome Back';
+    if (subtitle) subtitle.textContent = 'Sign in to access your Chama dashboard';
+}
+
+function showForgotPhoneError(value) {
+    var errEl = document.getElementById('forgotPhoneError');
+    if (!errEl) return;
+    if (!value) {
+        errEl.textContent = '';
+        return;
+    }
+    errEl.textContent = getPhoneError(value);
+}
+
+function setForgotAlert(msg, isSuccess) {
+    var el = document.getElementById('forgotAlertMsg');
+    if (!el) return;
+    if (!msg) {
+        el.style.display = 'none';
+        el.textContent = '';
+        return;
+    }
+    el.style.display = 'block';
+    el.textContent = msg;
+    if (isSuccess) {
+        el.style.background = '#e6fffa';
+        el.style.border = '1px solid #38b2ac';
+        el.style.color = '#234e52';
+    } else {
+        el.style.background = '#fff5f5';
+        el.style.border = '1px solid #feb2b2';
+        el.style.color = '#c53030';
+    }
+}
+
+async function handleSendForgotCode() {
+    var phoneInput = document.getElementById('forgotPhoneInput');
+    var btn = document.getElementById('sendForgotCodeBtn');
+    var codeContainer = document.getElementById('forgotCodeContainer');
+    var passcodeInput = document.getElementById('passcodeInput');
+
+    if (!phoneInput) return;
+    var phoneVal = phoneInput.value.trim();
+    var phoneErr = getPhoneError(phoneVal);
+    if (phoneErr) {
+        showForgotPhoneError(phoneVal);
+        phoneInput.style.borderColor = '#fc8181';
+        phoneInput.focus();
+        return;
+    }
+    showForgotPhoneError('');
+    phoneInput.style.borderColor = '#e2e8f0';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Sending Code...';
+    }
+    setForgotAlert('', false);
+
+    try {
+        var res = await fetch('/forgot-pin/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                phone: phoneVal,
+                countryCode: '+254'
+            })
+        });
+
+        var data = await res.json().catch(function() { return {}; });
+
+        if (!res.ok) {
+            setForgotAlert(data.error || 'Failed to send passcode. Please try again.', false);
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Send Code';
+            }
+            return;
+        }
+
+        setForgotAlert(data.message || 'Passcode sent successfully via SMS! Check your phone.', true);
+        if (codeContainer) codeContainer.style.display = 'flex';
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Resend Code';
+        }
+        if (passcodeInput) passcodeInput.focus();
+
+    } catch (err) {
+        setForgotAlert('Network error sending passcode. Please try again.', false);
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Send Code';
+        }
+    }
+}
+
+function onPasscodeChange(value) {
+    var errEl = document.getElementById('passcodeError');
+    if (errEl) errEl.textContent = '';
+    var input = document.getElementById('passcodeInput');
+    if (value && value.length >= 4 && value.length <= 6) {
+        if (input) input.style.borderColor = '#48bb78';
+    } else {
+        if (input) input.style.borderColor = '#4fd1c5';
+    }
+}
+
+async function handleVerifyPasscode() {
+    var passcodeInput = document.getElementById('passcodeInput');
+    var btn = document.getElementById('verifyPasscodeBtn');
+    var errEl = document.getElementById('passcodeError');
+
+    if (!passcodeInput) return;
+    var codeVal = passcodeInput.value.replace(/\D/g, '');
+
+    if (codeVal.length < 4 || codeVal.length > 6) {
+        if (errEl) errEl.textContent = 'Passcode must be 4–6 digits';
+        passcodeInput.style.borderColor = '#fc8181';
+        passcodeInput.focus();
+        return;
+    }
+    if (errEl) errEl.textContent = '';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Verifying Passcode...';
+    }
+
+    try {
+        var res = await fetch('/forgot-pin/verify', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                passcode: codeVal
+            })
+        });
+
+        var data = await res.json().catch(function() { return {}; });
+
+        if (!res.ok) {
+            if (errEl) errEl.textContent = data.error || 'Incorrect passcode. Please try again.';
+            passcodeInput.style.borderColor = '#fc8181';
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Verify Passcode';
+            }
+            return;
+        }
+
+        setForgotAlert(data.message || 'Passcode verified! Redirecting to login...', true);
+        passcodeInput.style.borderColor = '#48bb78';
+
+        // Redirect back to login page where the verified phone number is saved to session
+        setTimeout(function() {
+            window.location.href = data.redirect || '/login';
+        }, 400);
+
+    } catch (err) {
+        if (errEl) errEl.textContent = 'Network error verifying passcode. Please try again.';
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Verify Passcode';
+        }
+    }
+}
+</script>
