@@ -255,36 +255,6 @@
 
 
 
-      <!-- 6. Email activation -->
-      <section class="step" data-step="emailCode">
-        <h2>Account Activation: Email</h2>
-        <p class="note">Enter the 6-digit code sent to your email address.</p>
-        <input id="emailCode" class="code" inputmode="numeric" maxlength="6">
-        <p><button type="button" class="link" data-resend="email">Resend code</button></p>
-      </section>
-
-      <!-- 7. Phone activation -->
-      <section class="step" data-step="phoneCode">
-        <h2>Account Activation: Phone</h2>
-        <p class="note">Enter the 6-digit code sent to your phone number by SMS.</p>
-        <input id="phoneCode" class="code" inputmode="numeric" maxlength="6">
-        <p><button type="button" class="link" data-resend="phone">Resend code</button></p>
-      </section>
-
-      <!-- 8. Passport photo -->
-      <section class="step" data-step="passport">
-        <h2>Upload your Passport Photo</h2>
-        <input id="passport" type="file" accept="image/*">
-        <img id="passportPrev" class="preview" alt="Passport photo preview">
-      </section>
-
-      <!-- 9. National ID -->
-      <section class="step" data-step="nationalId">
-        <h2>Upload your National ID</h2>
-        <input id="nationalId" type="file" accept="image/*">
-        <img id="nationalIdPrev" class="preview" alt="National ID preview">
-      </section>
-
       <div class="banner" id="banner" role="alert"></div>
       <div class="actions">
         <button type="button" class="ghost" id="back">Back</button>
@@ -300,7 +270,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const STEPS = ['personal','location','contacts','password','emailCode','phoneCode','passport','nationalId'];
+const STEPS = ['personal','location','contacts','password'];
 const HOME_URL = '/dashboard';
 const phoneRx = /^(?:\+254|0)[17]\d{8}$/;
 const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -389,6 +359,7 @@ const submitters = {
     // All clear — let show(cur+1) proceed normally
   },
   async password() {
+    // Save all registration data to pendingverifiedaccount, then send user to login
     await api('/register', {
       fullName: v('fullName'), dob: v('dob'), gender: v('gender'),
       phone: normPhone(v('phone')), email: v('email').toLowerCase(),
@@ -397,45 +368,10 @@ const submitters = {
         phone: normPhone(v(`c${i}_phone`)), email: v(`c${i}_email`).toLowerCase() })),
       password: $('pw').value
     });
-    // After registration, auto-login and kick off email verification
-    const d = await api('/login', { email: v('email').toLowerCase(), password: $('pw').value });
-    token = d.token; sessionStorage.setItem('chama_token', token);
-    const res = await api('/send-code', { channel: 'email' }).catch(() => api('/resend-code', { channel: 'email' }));
-    if (res && res.demoCode) { $('emailCode').value = res.demoCode; }
-  },
-  async emailCode() {
-    await api('/verify-code', { channel: 'email', code: v('emailCode') })
-      .catch(() => api('/verify-email', { code: v('emailCode') }));
-    const res = await api('/send-code', { channel: 'phone' }).catch(() => {});
-    if (res && res.demoCode) { $('phoneCode').value = res.demoCode; }
-  },
-  async phoneCode() {
-    await api('/verify-code', { channel: 'phone', code: v('phoneCode') })
-      .catch(() => api('/verify-phone', { code: v('phoneCode') }));
-  },
-  async passport() {
-    const f = new FormData();
-    f.append('passportPhoto', $('passport').files[0]);
-    f.append('file', $('passport').files[0]);
-    await api('/upload/passport', f, true)
-      .catch(() => fetch('/api/kyc/passport-photo', {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + token },
-        body: f
-      }).then(r => r.json()));
-  },
-  async nationalId() {
-    const f = new FormData();
-    f.append('idFront', $('nationalId').files[0]);
-    f.append('file', $('nationalId').files[0]);
-    await api('/upload/national-id', f, true)
-      .catch(() => fetch('/api/kyc/national-id', {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + token },
-        body: f
-      }).then(r => r.json()));
-    sessionStorage.removeItem('chama_token');
-    location.href = HOME_URL;   // final step: land directly on Dashboard
+    // Store email in sessionStorage so login page can auto-fill and continue activation
+    sessionStorage.setItem('pendingEmail', v('email').toLowerCase());
+    // Redirect to login to complete steps 5-8 (email code, phone code, passport, national ID)
+    location.href = '/login';
   }
 };
 
@@ -445,8 +381,7 @@ function show(i) {
   document.querySelectorAll('.step').forEach(s => s.classList.toggle('active', s.dataset.step === STEPS[i]));
   $('bar').style.width = ((i + 1) / STEPS.length * 100) + '%';
   $('banner').style.display = 'none';
-  // Once the account exists, going back before email verification would re-register: block it
-  $('back').style.visibility = (i === 0 || i >= STEPS.indexOf('emailCode')) ? 'hidden' : 'visible';
+  $('back').style.visibility = i === 0 ? 'hidden' : 'visible';
   $('next').textContent = i === STEPS.length - 1 ? 'Finish' : 'Next';
   if (STEPS[i] === 'password') $('username').value = v('email');
 }
@@ -462,21 +397,6 @@ $('next').onclick = async () => {
 };
 $('back').onclick = () => cur > 0 && show(cur - 1);
 
-document.querySelectorAll('[data-resend]').forEach(b => b.onclick = async () => {
-  try {
-    const ch = b.dataset.resend;
-    await api('/send-code', { channel: ch }).catch(() => api('/resend-code', { channel: ch }));
-    b.textContent = 'Code sent';
-    setTimeout(() => b.textContent = 'Resend code', 4000);
-  }
-  catch (e) { fail(e.message); }
-});
-
-// Image previews
-[['passport','passportPrev'],['nationalId','nationalIdPrev']].forEach(([inp, img]) => $(inp).onchange = e => {
-  const f = e.target.files[0]; if (!f) return;
-  $(img).src = URL.createObjectURL(f); $(img).style.display = 'block';
-});
 
 show(0);
 </script>

@@ -401,6 +401,50 @@ router.post("/api/auth/check-personal-info", async (req, res) => {
   }
 });
 
+// 8. Account status check: POST /api/auth/check-account-status
+// Called by login.hbs on load when pendingEmail exists in sessionStorage.
+// Returns status: 'pending' | 'registered' | 'not-found'
+router.post("/api/auth/check-account-status", async (req, res) => {
+  try {
+    const rawEmail = String(req.body.email || "").trim().toLowerCase();
+    if (!rawEmail) return res.status(400).json({ error: "Email is required." });
+
+    if (mongoose.connection && mongoose.connection.readyState === 1 && mongoose.connection.db) {
+      const db = mongoose.connection.db;
+
+      // Check pendingverifiedaccount first
+      const pending = await db
+        .collection("pendingverifiedaccount")
+        .findOne({ email: rawEmail }, { projection: { _id: 1 } });
+      if (pending) {
+        // Auto-login to get a token for the activation API calls
+        let token = null;
+        try {
+          const user = await Register.findOne({ email: rawEmail });
+          if (user) {
+            token = "chama_token_" + Date.now();
+          }
+        } catch (_) {}
+        return res.json({ status: "pending", token });
+      }
+
+      // Check users collection
+      const registered = await db
+        .collection("users")
+        .findOne({ email: rawEmail }, { projection: { _id: 1 } });
+      if (registered) {
+        return res.json({ status: "registered" });
+      }
+    }
+
+    return res.json({ status: "not-found" });
+  } catch (err) {
+    console.error("[apiAuth] check-account-status error:", err);
+    res.status(500).json({ error: "Could not check account status." });
+  }
+});
+
 module.exports = router;
+
 
 
