@@ -359,18 +359,27 @@ const submitters = {
     // All clear — let show(cur+1) proceed normally
   },
   async password() {
-    // Save all registration data to pendingverifiedaccount, then send user to login
-    await api('/register', {
-      fullName: v('fullName'), dob: v('dob'), gender: v('gender'),
-      phone: normPhone(v('phone')), email: v('email').toLowerCase(),
-      location: { county: v('county'), subCounty: v('subCounty'), town: v('town'), street: v('street') },
-      contacts: [0,1].map(i => ({ name: v(`c${i}_name`), gender: v(`c${i}_gender`), relationship: v(`c${i}_relationship`),
-        phone: normPhone(v(`c${i}_phone`)), email: v(`c${i}_email`).toLowerCase() })),
-      password: $('pw').value
+    // Call the real /auth/register endpoint (backed by authController + authMiddleware)
+    const res = await fetch('/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: v('fullName'), dob: v('dob'), gender: v('gender'),
+        phone: normPhone(v('phone')), email: v('email').toLowerCase(),
+        location: { county: v('county'), subCounty: v('subCounty'), town: v('town'), street: v('street') },
+        contacts: [0,1].map(i => ({ name: v(`c${i}_name`), gender: v(`c${i}_gender`), relationship: v(`c${i}_relationship`),
+          phone: normPhone(v(`c${i}_phone`)), email: v(`c${i}_email`).toLowerCase() })),
+        password: $('pw').value
+      })
     });
-    // Store email in sessionStorage so login page can auto-fill and continue activation
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.error || 'Registration failed. Please try again.');
+    // Store real JWT token and pending email so login page continues activation
+    if (data.token) {
+      sessionStorage.setItem('chama_token', data.token);
+    }
     sessionStorage.setItem('pendingEmail', v('email').toLowerCase());
-    // Redirect to login to complete steps 5-8 (email code, phone code, passport, national ID)
+    // Redirect to login to complete steps 5-8
     location.href = '/login';
   }
 };

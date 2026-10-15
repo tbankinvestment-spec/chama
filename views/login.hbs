@@ -268,16 +268,16 @@
     if (!ACT_STEPS.includes(id)) $('activationBar').style.display = 'none';
   }
 
-  // ── API helper ──
+  // ── API helper — uses real JWT Bearer token ──
   async function api(path, body, isForm) {
     const headers = token ? { Authorization: 'Bearer ' + token } : {};
     if (!isForm) headers['Content-Type'] = 'application/json';
-    const res = await fetch('/api/auth' + path, {
+    const res = await fetch(path, {
       method: 'POST', headers,
       body: isForm ? body : JSON.stringify(body || {})
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || data.message || 'Something went wrong. Try again.');
+    if (!res.ok) throw new Error(data.message || data.error || 'Something went wrong. Try again.');
     return data;
   }
 
@@ -292,7 +292,7 @@
     $('loginEmail').value = pendingEmail;
 
     try {
-      // Check which collection the email belongs to
+      // Check users collection first, then pendingverifiedaccount
       const res = await fetch('/api/auth/check-account-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -301,9 +301,9 @@
       const data = await res.json().catch(() => ({}));
 
       if (data.status === 'pending') {
-        // Found in pendingverifiedaccount → show activation steps
-        token = data.token || token;
-        if (data.token) sessionStorage.setItem('chama_token', token);
+        // Found in pendingverifiedaccount → restore token and show activation steps
+        token = sessionStorage.getItem('chama_token') || data.token || token;
+        if (token) sessionStorage.setItem('chama_token', token);
         startActivation();
       } else if (data.status === 'registered') {
         // Found in users → already fully registered, go to dashboard
@@ -313,7 +313,6 @@
         sessionStorage.removeItem('pendingEmail');
       }
     } catch (e) {
-      // Network error — show normal login silently
       sessionStorage.removeItem('pendingEmail');
     }
   });
@@ -322,8 +321,8 @@
     actStep = 0;
     showSection('emailCodeSection', 'Account Activation', 'Complete the remaining steps to activate your account');
     setBar(0);
-    // Auto-send email verification code
-    api('/send-code', { channel: 'email' })
+    // Auto-send email verification code via real middleware endpoint
+    api('/auth/send-code', { channel: 'email' })
       .then(r => { if (r && r.demoCode) $('emailCode').value = r.demoCode; })
       .catch(() => {});
   }
@@ -336,21 +335,19 @@
     if (!/^\d{6}$/.test(code)) return showBanner('Enter the 6-digit code.');
     this.disabled = true; this.textContent = 'Verifying…';
     try {
-      await api('/verify-code', { channel: 'email', code })
-        .catch(() => api('/verify-email', { code }));
-      // Send phone code
-      const r = await api('/send-code', { channel: 'phone' }).catch(() => ({}));
-      if (r && r.demoCode) $('phoneCode').value = r.demoCode;
+      // Real endpoint: /auth/verify-code (backed by authController.verifyCode + authenticate middleware)
+      await api('/auth/verify-code', { channel: 'email', code });
       actStep = 1;
       showSection('phoneCodeSection', 'Account Activation', 'Step 2 of 4 — Phone Verification');
       setBar(1);
+      // Note: verifyCode auto-sends SMS on email success per authController
     } catch (e) { showBanner(e.message); }
     finally { this.disabled = false; this.textContent = 'Next'; }
   };
 
   $('resendEmailBtn').onclick = async function () {
     try {
-      await api('/send-code', { channel: 'email' }).catch(() => api('/resend-code', { channel: 'email' }));
+      await api('/auth/resend-code', { channel: 'EMAIL' });
       this.textContent = 'Code sent';
       setTimeout(() => this.textContent = 'Resend code', 4000);
     } catch (e) { showBanner(e.message); }
@@ -364,8 +361,8 @@
     if (!/^\d{6}$/.test(code)) return showBanner('Enter the 6-digit code.');
     this.disabled = true; this.textContent = 'Verifying…';
     try {
-      await api('/verify-code', { channel: 'phone', code })
-        .catch(() => api('/verify-phone', { code }));
+      // Real endpoint: /auth/verify-code (backed by authController.verifyCode + authenticate middleware)
+      await api('/auth/verify-code', { channel: 'phone', code });
       actStep = 2;
       showSection('passportSection', 'Account Activation', 'Step 3 of 4 — Passport Photo');
       setBar(2);
@@ -375,7 +372,7 @@
 
   $('resendPhoneBtn').onclick = async function () {
     try {
-      await api('/send-code', { channel: 'phone' }).catch(() => api('/resend-code', { channel: 'phone' }));
+      await api('/auth/resend-code', { channel: 'SMS' });
       this.textContent = 'Code sent';
       setTimeout(() => this.textContent = 'Resend code', 4000);
     } catch (e) { showBanner(e.message); }
@@ -396,11 +393,8 @@
     try {
       const f = new FormData();
       f.append('passportPhoto', $('passportFile').files[0]);
-      f.append('file', $('passportFile').files[0]);
-      await api('/upload/passport', f, true)
-        .catch(() => fetch('/api/kyc/passport-photo', {
-          method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: f
-        }).then(r => r.json()));
+      // Real endpoint: /kyc/passport-photo (backed by authenticate + multer + kycController)
+      await api('/kyc/passport-photo', f, true);
       actStep = 3;
       showSection('nationalIdSection', 'Account Activation', 'Step 4 of 4 — National ID');
       setBar(3);
@@ -423,11 +417,9 @@
     try {
       const f = new FormData();
       f.append('idFront', $('nationalIdFile').files[0]);
-      f.append('file', $('nationalIdFile').files[0]);
-      await api('/upload/national-id', f, true)
-        .catch(() => fetch('/api/kyc/national-id', {
-          method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: f
-        }).then(r => r.json()));
+      f.append('idBack', $('nationalIdFile').files[0]);
+      // Real endpoint: /kyc/national-id (backed by authenticate + multer + kycController)
+      await api('/kyc/national-id', f, true);
       // Clear pending state and go to dashboard
       sessionStorage.removeItem('pendingEmail');
       sessionStorage.removeItem('chama_token');

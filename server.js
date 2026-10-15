@@ -10,6 +10,8 @@ const apiAuthRoutes = require("./routes/apiAuth");
 const dashboardRoutes = require("./routes/dashboard");
 const verifyRoutes = require("./routes/verify");
 const testViewerRoutes = require("./tests/testViewer");
+const authApiRoutes = require("./routes/authRoutes");   // real JWT-backed auth API
+const kycRoutes = require("./routes/kycRoutes");         // real multer-backed KYC uploads
 
 const app = createApp();
 const port = process.env.PORT || 3000;
@@ -20,6 +22,8 @@ app.use(apiAuthRoutes);
 app.use(dashboardRoutes);
 app.use(verifyRoutes);
 app.use(testViewerRoutes);
+app.use("/auth", authApiRoutes);   // → /auth/register, /auth/login, /auth/verify-email, /auth/send-code …
+app.use("/kyc", kycRoutes);        // → /kyc/passport-photo, /kyc/national-id
 
 connectDB();
 connectRedis();
