@@ -412,28 +412,25 @@ router.post("/api/auth/check-account-status", async (req, res) => {
     if (mongoose.connection && mongoose.connection.readyState === 1 && mongoose.connection.db) {
       const db = mongoose.connection.db;
 
-      // Check pendingverifiedaccount first
-      const pending = await db
-        .collection("pendingverifiedaccount")
-        .findOne({ email: rawEmail }, { projection: { _id: 1 } });
-      if (pending) {
-        // Auto-login to get a token for the activation API calls
-        let token = null;
-        try {
-          const user = await Register.findOne({ email: rawEmail });
-          if (user) {
-            token = "chama_token_" + Date.now();
-          }
-        } catch (_) {}
-        return res.json({ status: "pending", token });
-      }
-
-      // Check users collection
+      // Check users collection FIRST — fully registered members go straight to dashboard
       const registered = await db
         .collection("users")
         .findOne({ email: rawEmail }, { projection: { _id: 1 } });
       if (registered) {
         return res.json({ status: "registered" });
+      }
+
+      // Not in users — check pendingverifiedaccount (registration started but not completed)
+      const pending = await db
+        .collection("pendingverifiedaccount")
+        .findOne({ email: rawEmail }, { projection: { _id: 1 } });
+      if (pending) {
+        let token = null;
+        try {
+          const user = await Register.findOne({ email: rawEmail });
+          if (user) token = "chama_token_" + Date.now();
+        } catch (_) {}
+        return res.json({ status: "pending", token });
       }
     }
 
