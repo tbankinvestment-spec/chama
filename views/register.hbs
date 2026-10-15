@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Create your Chama account</title>
+<style>
+  :root {
+    --bg: #f0f2f5;
+    --card: #ffffff;
+    --text: #2d3748;
+    --muted: #718096;
+    --brand: #319795;
+    --brand-hover: #2c7a7b;
+    --brand-gradient: linear-gradient(135deg, #38b2ac 0%, #319795 100%);
+    --brand-focus: #4fd1c5;
+    --navy: #1e3a5f;
+    --navy-gradient: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
+    --err: #c53030;
+    --err-border: #fc8181;
+    --err-bg: #fff5f5;
+    --line: #e2e8f0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121824;
+      --card: #1a2332;
+      --text: #f7fafc;
+      --muted: #a0aec0;
+      --brand: #4fd1c5;
+      --brand-hover: #38b2ac;
+      --brand-gradient: linear-gradient(135deg, #4fd1c5 0%, #319795 100%);
+      --brand-focus: #38b2ac;
+      --navy: #63b3ed;
+      --navy-gradient: linear-gradient(135deg, #2c5282 0%, #1e3a5f 100%);
+      --err: #feb2b2;
+      --err-border: #fc8181;
+      --err-bg: rgba(229, 62, 62, 0.15);
+      --line: #2d3748;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 560px; margin: 30px auto 50px; padding: 0 16px; }
+  
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .card-header {
+    background: var(--navy-gradient);
+    padding: 28px 24px 22px;
+    text-align: center;
+    color: #ffffff;
+  }
+  .card-header .logo {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    color: #ffffff;
+  }
+  .card-header .logo span {
+    color: #4fd1c5;
+  }
+  .card-header h1 {
+    font-size: 1.45rem;
+    margin: 0 0 6px;
+    color: #ffffff;
+    font-weight: 700;
+  }
+  .card-header .sub {
+    color: #e2e8f0;
+    opacity: 0.9;
+    margin: 0 0 16px;
+    font-size: .92rem;
+  }
+  .bar {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .bar > i {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: #4fd1c5;
+    transition: width .25s ease;
+    border-radius: 4px;
+    box-shadow: 0 0 8px rgba(79, 209, 197, 0.6);
+  }
+  .count {
+    font-size: .82rem;
+    color: #e2e8f0;
+    opacity: 0.95;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .card-body {
+    padding: 24px 26px 30px;
+  }
+
+  .step { display: none; }
+  .step.active { display: block; }
+  .step h2 {
+    font-size: 1.2rem;
+    margin: 0 0 16px;
+    color: var(--navy);
+    font-weight: 700;
+    border-bottom: 1.5px solid var(--line);
+    padding-bottom: 10px;
+  }
+  h3 { font-size: .98rem; margin: 18px 0 8px; color: var(--brand); font-weight: 700; }
+  label { display: block; font-size: .88rem; font-weight: 600; margin: 14px 0 6px; color: var(--text); }
+  input, select {
+    width: 100%;
+    padding: 11px 13px;
+    font-size: .98rem;
+    border: 1.5px solid var(--line);
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--text);
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  input:focus, select:focus {
+    border-color: var(--brand-focus);
+    box-shadow: 0 0 0 3px rgba(79, 209, 197, 0.25);
+  }
+  input[readonly] { opacity: .75; background: #f7fafc; cursor: not-allowed; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 480px) { .row { grid-template-columns: 1fr; gap: 4px; } }
+  .err { color: var(--err); font-size: .82rem; min-height: 1em; margin-top: 4px; }
+  .banner {
+    display: none;
+    background: var(--err-bg);
+    border: 1.5px solid var(--err-border);
+    color: var(--err);
+    padding: 11px 14px;
+    border-radius: 8px;
+    margin-top: 16px;
+    font-size: .9rem;
+    font-weight: 500;
+  }
+  .actions { display: flex; gap: 12px; margin-top: 24px; padding-top: 12px; }
+  button { font: inherit; padding: 12px 20px; border-radius: 8px; border: 0; cursor: pointer; font-weight: 600; }
+  .primary {
+    background: var(--brand-gradient);
+    color: #fff;
+    flex: 1;
+    box-shadow: 0 4px 14px rgba(56, 178, 172, 0.35);
+    transition: box-shadow .2s, transform .1s;
+  }
+  .primary:hover {
+    box-shadow: 0 6px 18px rgba(56, 178, 172, 0.45);
+  }
+  .primary:active { transform: scale(0.99); }
+  .ghost {
+    background: #edf2f7;
+    border: 1.5px solid var(--line);
+    color: var(--text);
+    transition: background .15s;
+  }
+  .ghost:hover { background: #e2e8f0; }
+  .link {
+    background: none;
+    color: var(--brand);
+    padding: 0;
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .link:hover { text-decoration: underline; color: var(--brand-hover); }
+  button:disabled { opacity: .6; cursor: wait; }
+  .code {
+    letter-spacing: .5em;
+    text-align: center;
+    font-size: 1.45rem;
+    font-weight: 700;
+    border-color: var(--line);
+  }
+  .preview {
+    margin-top: 12px;
+    max-width: 100%;
+    max-height: 240px;
+    border-radius: 8px;
+    display: none;
+    border: 1.5px solid var(--line);
+  }
+  .note { font-size: .85rem; color: var(--muted); margin-top: 6px; }
+  .login-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: .9rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="card-header">
+      <div class="logo">Cha<span>ma</span></div>
+      <h1>Create your Chama account</h1>
+      <p class="sub">Complete each step to activate your account.</p>
+      <div class="bar"><i id="bar"></i></div>
+      <div class="count" id="count"></div>
+    </div>
+
+    <div class="card-body">
+      <!-- 1. Personal information -->
+      <section class="step active" data-step="personal">
+        <h2>Personal Information</h2>
+        <label for="fullName">Full Name</label><input id="fullName" autocomplete="name" placeholder="e.g. Jane Mwangi">
+        <div class="row">
+          <div><label for="dob">Date of Birth</label><input id="dob" type="date"></div>
+          <div><label for="gender">Gender</label>
+            <select id="gender"><option value="">Select…</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+        </div>
+        <div class="row">
+          <div><label for="phone">Phone Number</label><input id="phone" type="tel" placeholder="0712345678" autocomplete="tel"></div>
+          <div><label for="phone2">Confirm Phone Number</label><input id="phone2" type="tel" placeholder="0712345678"></div>
+        </div>
+        <div class="row">
+          <div><label for="email">Email Address</label><input id="email" type="email" placeholder="name@example.com" autocomplete="email"></div>
+          <div><label for="email2">Confirm Email Address</label><input id="email2" type="email" placeholder="name@example.com"></div>
+        </div>
+      </section>
+
+      <!-- 2. Location -->
+      <section class="step" data-step="location">
+        <h2>Your Location</h2>
+        <div class="row">
+          <div><label for="county">County</label><input id="county" placeholder="e.g. Nairobi"></div>
+          <div><label for="subCounty">Sub County</label><input id="subCounty" placeholder="e.g. Westlands"></div>
+        </div>
+        <div class="row">
+          <div><label for="town">Town</label><input id="town" placeholder="e.g. Parklands"></div>
+          <div><label for="street">Road/Street</label><input id="street" placeholder="e.g. Mpaka Road"></div>
+        </div>
+      </section>
+
+      <!-- 3. Close persons of contact -->
+      <section class="step" data-step="contacts">
+        <h2>Close Persons of Contact</h2>
+        <div id="contacts"></div>
+      </section>
+
+      <!-- 4. Create password -->
+      <section class="step" data-step="password">
+        <h2>Create Your Login</h2>
+        <label for="username">UserName (Email)</label><input id="username" readonly>
+        <label for="pw">Create Password</label><input id="pw" type="password" autocomplete="new-password">
+        <label for="pw2">Confirm Password</label><input id="pw2" type="password" autocomplete="new-password">
+        <p class="note">At least 8 characters, with a letter and a number.</p>
+      </section>
+
+      <!-- 5. Login -->
+      <section class="step" data-step="login">
+        <h2>Personal Account Login</h2>
+        <label for="loginEmail">Email Address</label><input id="loginEmail" type="email" autocomplete="username">
+        <label for="loginPw">Enter Password</label><input id="loginPw" type="password" autocomplete="current-password">
+      </section>
+
+      <!-- 6. Email activation -->
+      <section class="step" data-step="emailCode">
+        <h2>Account Activation: Email</h2>
+        <p class="note">Enter the 6-digit code sent to your email address.</p>
+        <input id="emailCode" class="code" inputmode="numeric" maxlength="6">
+        <p><button type="button" class="link" data-resend="email">Resend code</button></p>
+      </section>
+
+      <!-- 7. Phone activation -->
+      <section class="step" data-step="phoneCode">
+        <h2>Account Activation: Phone</h2>
+        <p class="note">Enter the 6-digit code sent to your phone number by SMS.</p>
+        <input id="phoneCode" class="code" inputmode="numeric" maxlength="6">
+        <p><button type="button" class="link" data-resend="phone">Resend code</button></p>
+      </section>
+
+      <!-- 8. Passport photo -->
+      <section class="step" data-step="passport">
+        <h2>Upload your Passport Photo</h2>
+        <input id="passport" type="file" accept="image/*">
+        <img id="passportPrev" class="preview" alt="Passport photo preview">
+      </section>
+
+      <!-- 9. National ID -->
+      <section class="step" data-step="nationalId">
+        <h2>Upload your National ID</h2>
+        <input id="nationalId" type="file" accept="image/*">
+        <img id="nationalIdPrev" class="preview" alt="National ID preview">
+      </section>
+
+      <div class="banner" id="banner" role="alert"></div>
+      <div class="actions">
+        <button type="button" class="ghost" id="back">Back</button>
+        <button type="button" class="primary" id="next">Go to the Next Page</button>
+      </div>
+
+      <div class="login-footer">
+        Already have an account? <a href="/login" class="link">Sign In</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const STEPS = ['personal','location','contacts','password','login','emailCode','phoneCode','passport','nationalId'];
+const HOME_URL = '/dashboard';
+const phoneRx = /^(?:\+254|0)[17]\d{8}$/;
+const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+let cur = 0, token = sessionStorage.getItem('chama_token') || '';
+
+// Build the two contact-person blocks
+const fields = [['Full Name','name','text'],['Gender','gender','select'],['Relationship','relationship','text'],
+  ['Phone Number','phone','tel'],['Confirm Phone Number','phone2','tel'],['Email Address','email','email'],['Confirm Email Address','email2','email']];
+$('contacts').innerHTML = ['One','Two'].map((n,i) => `<h3>Person ${n}</h3><div class="row">` + fields.map(([l,k,t]) =>
+  `<div><label for="c${i}_${k}">${l}</label>` + (t==='select'
+    ? `<select id="c${i}_${k}"><option value="">Select…</option><option>Male</option><option>Female</option><option>Other</option></select>`
+    : `<input id="c${i}_${k}" type="${t}">`) + `</div>`).join('') + `</div>`).join('');
+
+const v = id => $(id).value.trim();
+const normPhone = p => p.replace(/^0/, '+254');
+
+// ---------- validation (returns error message or '') ----------
+const validators = {
+  personal() {
+    if (!v('fullName')) return 'Enter your full name.';
+    if (!v('dob')) return 'Enter your date of birth.';
+    const age = (Date.now() - new Date(v('dob'))) / 31557600000;
+    if (age < 18) return 'You must be at least 18 years old.';
+    if (!v('gender')) return 'Select your gender.';
+    if (!phoneRx.test(v('phone'))) return 'Enter a valid Kenyan phone number.';
+    if (v('phone') !== v('phone2')) return 'Phone numbers do not match.';
+    if (!emailRx.test(v('email'))) return 'Enter a valid email address.';
+    if (v('email').toLowerCase() !== v('email2').toLowerCase()) return 'Email addresses do not match.';
+    return '';
+  },
+  location() {
+    return ['county','subCounty','town','street'].every(k => v(k)) ? '' : 'Fill in all location fields.';
+  },
+  contacts() {
+    for (let i = 0; i < 2; i++) {
+      const g = k => v(`c${i}_${k}`), who = `Person ${i ? 'Two' : 'One'}`;
+      if (!g('name') || !g('gender') || !g('relationship')) return `${who}: complete name, gender and relationship.`;
+      if (!phoneRx.test(g('phone'))) return `${who}: enter a valid phone number.`;
+      if (g('phone') !== g('phone2')) return `${who}: phone numbers do not match.`;
+      if (!emailRx.test(g('email'))) return `${who}: enter a valid email.`;
+      if (g('email').toLowerCase() !== g('email2').toLowerCase()) return `${who}: email addresses do not match.`;
+    }
+    if (v('c0_phone') === v('c1_phone')) return 'The two contacts need different phone numbers.';
+    return '';
+  },
+  password() {
+    if (v('pw').length < 8 || !/[A-Za-z]/.test(v('pw')) || !/\d/.test(v('pw'))) return 'Password needs 8+ characters with a letter and a number.';
+    return v('pw') === v('pw2') ? '' : 'Passwords do not match.';
+  },
+  login() { return emailRx.test(v('loginEmail')) && $('loginPw').value ? '' : 'Enter your email and password.'; },
+  emailCode() { return /^\d{6}$/.test(v('emailCode')) ? '' : 'Enter the 6-digit code.'; },
+  phoneCode() { return /^\d{6}$/.test(v('phoneCode')) ? '' : 'Enter the 6-digit code.'; },
+  passport() { return $('passport').files[0] ? '' : 'Choose a passport photo.'; },
+  nationalId() { return $('nationalId').files[0] ? '' : 'Choose a photo of your National ID.'; }
+};
+
+// ---------- API ----------
+async function api(path, body, isForm) {
+  const headers = token ? { Authorization: 'Bearer ' + token } : {};
+  if (!isForm) headers['Content-Type'] = 'application/json';
+  const res = await fetch('/api/auth' + path, { method: 'POST', headers, body: isForm ? body : JSON.stringify(body || {}) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || data.error || 'Something went wrong. Try again.');
+  return data;
+}
+
+// What happens when "Go to the Next Page" is pressed on each step
+const submitters = {
+  async password() {
+    await api('/register', {
+      fullName: v('fullName'), dob: v('dob'), gender: v('gender'),
+      phone: normPhone(v('phone')), email: v('email').toLowerCase(),
+      location: { county: v('county'), subCounty: v('subCounty'), town: v('town'), street: v('street') },
+      contacts: [0,1].map(i => ({ name: v(`c${i}_name`), gender: v(`c${i}_gender`), relationship: v(`c${i}_relationship`),
+        phone: normPhone(v(`c${i}_phone`)), email: v(`c${i}_email`).toLowerCase() })),
+      password: $('pw').value
+    });
+    $('loginEmail').value = v('email');
+    $('loginPw').value = $('pw').value;
+  },
+  async login() {
+    const d = await api('/login', { email: v('loginEmail'), password: $('loginPw').value });
+    token = d.token; sessionStorage.setItem('chama_token', token);
+    const res = await api('/send-code', { channel: 'email' }).catch(() => api('/resend-code', { channel: 'email' }));
+    if (res && res.demoCode) { $('emailCode').value = res.demoCode; }
+  },
+  async emailCode() {
+    await api('/verify-code', { channel: 'email', code: v('emailCode') })
+      .catch(() => api('/verify-email', { code: v('emailCode') }));
+    const res = await api('/send-code', { channel: 'phone' }).catch(() => {});
+    if (res && res.demoCode) { $('phoneCode').value = res.demoCode; }
+  },
+  async phoneCode() {
+    await api('/verify-code', { channel: 'phone', code: v('phoneCode') })
+      .catch(() => api('/verify-phone', { code: v('phoneCode') }));
+  },
+  async passport() {
+    const f = new FormData();
+    f.append('passportPhoto', $('passport').files[0]);
+    f.append('file', $('passport').files[0]);
+    await api('/upload/passport', f, true)
+      .catch(() => fetch('/api/kyc/passport-photo', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: f
+      }).then(r => r.json()));
+  },
+  async nationalId() {
+    const f = new FormData();
+    f.append('idFront', $('nationalId').files[0]);
+    f.append('file', $('nationalId').files[0]);
+    await api('/upload/national-id', f, true)
+      .catch(() => fetch('/api/kyc/national-id', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: f
+      }).then(r => r.json()));
+    sessionStorage.removeItem('chama_token');
+    location.href = HOME_URL;   // final step: land directly on Dashboard
+  }
+};
+
+// ---------- navigation ----------
+function show(i) {
+  cur = i;
+  document.querySelectorAll('.step').forEach(s => s.classList.toggle('active', s.dataset.step === STEPS[i]));
+  $('bar').style.width = ((i + 1) / STEPS.length * 100) + '%';
+  $('count').textContent = `Step ${i + 1} of ${STEPS.length}`;
+  $('banner').style.display = 'none';
+  // Once the account exists, going back before login would re-register: block it
+  $('back').style.visibility = (i === 0 || i >= STEPS.indexOf('login')) ? 'hidden' : 'visible';
+  $('next').textContent = i === STEPS.length - 1 ? 'Finish' : 'Go to the Next Page';
+  if (STEPS[i] === 'password') $('username').value = v('email');
+}
+function fail(msg) { const b = $('banner'); b.textContent = msg; b.style.display = 'block'; }
+
+$('next').onclick = async () => {
+  const name = STEPS[cur], err = validators[name]();
+  if (err) return fail(err);
+  $('next').disabled = true;
+  try { if (submitters[name]) await submitters[name](); show(cur + 1); }
+  catch (e) { fail(e.message); }
+  finally { $('next').disabled = false; }
+};
+$('back').onclick = () => cur > 0 && show(cur - 1);
+
+document.querySelectorAll('[data-resend]').forEach(b => b.onclick = async () => {
+  try {
+    const ch = b.dataset.resend;
+    await api('/send-code', { channel: ch }).catch(() => api('/resend-code', { channel: ch }));
+    b.textContent = 'Code sent';
+    setTimeout(() => b.textContent = 'Resend code', 4000);
+  }
+  catch (e) { fail(e.message); }
+});
+
+// Image previews
+[['passport','passportPrev'],['nationalId','nationalIdPrev']].forEach(([inp, img]) => $(inp).onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  $(img).src = URL.createObjectURL(f); $(img).style.display = 'block';
+});
+
+show(0);
+</script>
+</body>
+</html>

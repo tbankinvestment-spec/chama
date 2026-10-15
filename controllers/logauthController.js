@@ -535,12 +535,11 @@ exports.showRegister = (req, res) => {
   if (req.session.user) return res.redirect("/dashboard");
   const errors = Object.assign({}, res.locals.errors || {});
   const messages = Object.assign({}, res.locals.messages || {});
-  res.render("login", {
-    title: "Register",
-    isRegister: true,
+  res.render("register", {
+    layout: false,
+    title: "Create your Chama account",
     errors,
     messages,
-    formData: {},
   });
 };
 

@@ -6,6 +6,7 @@ const { connectRedis } = require("./config/redis");
 
 const homeRoutes = require("./routes/home");
 const authRoutes = require("./routes/logauth");
+const apiAuthRoutes = require("./routes/apiAuth");
 const dashboardRoutes = require("./routes/dashboard");
 const verifyRoutes = require("./routes/verify");
 const testViewerRoutes = require("./tests/testViewer");
@@ -15,6 +16,7 @@ const port = process.env.PORT || 3000;
 
 app.use(homeRoutes);
 app.use(authRoutes);
+app.use(apiAuthRoutes);
 app.use(dashboardRoutes);
 app.use(verifyRoutes);
 app.use(testViewerRoutes);
