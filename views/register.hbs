@@ -1,9 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Create your Chama account</title>
+
 <style>
   :root {
     --bg: #f0f2f5;
@@ -101,13 +96,7 @@
     border-radius: 4px;
     box-shadow: 0 0 8px rgba(79, 209, 197, 0.6);
   }
-  .count {
-    font-size: .82rem;
-    color: #e2e8f0;
-    opacity: 0.95;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-  }
+
 
   .card-body {
     padding: 24px 26px 30px;
@@ -208,16 +197,12 @@
     color: var(--muted);
   }
 </style>
-</head>
-<body>
 <div class="wrap">
   <div class="card">
     <div class="card-header">
       <div class="logo">Cha<span>ma</span></div>
       <h1>Create your Chama account</h1>
-      <p class="sub">Complete each step to activate your account.</p>
-      <div class="bar"><i id="bar"></i></div>
-      <div class="count" id="count"></div>
+      <div class="bar" style="margin-top: 14px; margin-bottom: 0;"><i id="bar"></i></div>
     </div>
 
     <div class="card-body">
@@ -268,12 +253,7 @@
         <p class="note">At least 8 characters, with a letter and a number.</p>
       </section>
 
-      <!-- 5. Login -->
-      <section class="step" data-step="login">
-        <h2>Personal Account Login</h2>
-        <label for="loginEmail">Email Address</label><input id="loginEmail" type="email" autocomplete="username">
-        <label for="loginPw">Enter Password</label><input id="loginPw" type="password" autocomplete="current-password">
-      </section>
+
 
       <!-- 6. Email activation -->
       <section class="step" data-step="emailCode">
@@ -308,7 +288,7 @@
       <div class="banner" id="banner" role="alert"></div>
       <div class="actions">
         <button type="button" class="ghost" id="back">Back</button>
-        <button type="button" class="primary" id="next">Go to the Next Page</button>
+        <button type="button" class="primary" id="next">Next</button>
       </div>
 
       <div class="login-footer">
@@ -320,7 +300,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const STEPS = ['personal','location','contacts','password','login','emailCode','phoneCode','passport','nationalId'];
+const STEPS = ['personal','location','contacts','password','emailCode','phoneCode','passport','nationalId'];
 const HOME_URL = '/dashboard';
 const phoneRx = /^(?:\+254|0)[17]\d{8}$/;
 const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -370,7 +350,6 @@ const validators = {
     if (v('pw').length < 8 || !/[A-Za-z]/.test(v('pw')) || !/\d/.test(v('pw'))) return 'Password needs 8+ characters with a letter and a number.';
     return v('pw') === v('pw2') ? '' : 'Passwords do not match.';
   },
-  login() { return emailRx.test(v('loginEmail')) && $('loginPw').value ? '' : 'Enter your email and password.'; },
   emailCode() { return /^\d{6}$/.test(v('emailCode')) ? '' : 'Enter the 6-digit code.'; },
   phoneCode() { return /^\d{6}$/.test(v('phoneCode')) ? '' : 'Enter the 6-digit code.'; },
   passport() { return $('passport').files[0] ? '' : 'Choose a passport photo.'; },
@@ -387,8 +366,28 @@ async function api(path, body, isForm) {
   return data;
 }
 
-// What happens when "Go to the Next Page" is pressed on each step
+// What happens when "Next" is pressed on each step
 const submitters = {
+  async personal() {
+    const emailVal = v('email').toLowerCase();
+    const phoneVal = normPhone(v('phone'));
+    $('next').textContent = 'Checking…';
+    const res = await fetch('/api/auth/check-personal-info', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: emailVal, phone: phoneVal })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      fail(data.error || 'Could not verify your details. Please try again.');
+      if (data.redirect) {
+        // Email already registered → redirect to login after short delay
+        setTimeout(() => { location.href = data.redirect; }, 2500);
+      }
+      throw new Error(data.error || 'Duplicate account');
+    }
+    // All clear — let show(cur+1) proceed normally
+  },
   async password() {
     await api('/register', {
       fullName: v('fullName'), dob: v('dob'), gender: v('gender'),
@@ -398,11 +397,8 @@ const submitters = {
         phone: normPhone(v(`c${i}_phone`)), email: v(`c${i}_email`).toLowerCase() })),
       password: $('pw').value
     });
-    $('loginEmail').value = v('email');
-    $('loginPw').value = $('pw').value;
-  },
-  async login() {
-    const d = await api('/login', { email: v('loginEmail'), password: $('loginPw').value });
+    // After registration, auto-login and kick off email verification
+    const d = await api('/login', { email: v('email').toLowerCase(), password: $('pw').value });
     token = d.token; sessionStorage.setItem('chama_token', token);
     const res = await api('/send-code', { channel: 'email' }).catch(() => api('/resend-code', { channel: 'email' }));
     if (res && res.demoCode) { $('emailCode').value = res.demoCode; }
@@ -448,11 +444,10 @@ function show(i) {
   cur = i;
   document.querySelectorAll('.step').forEach(s => s.classList.toggle('active', s.dataset.step === STEPS[i]));
   $('bar').style.width = ((i + 1) / STEPS.length * 100) + '%';
-  $('count').textContent = `Step ${i + 1} of ${STEPS.length}`;
   $('banner').style.display = 'none';
-  // Once the account exists, going back before login would re-register: block it
-  $('back').style.visibility = (i === 0 || i >= STEPS.indexOf('login')) ? 'hidden' : 'visible';
-  $('next').textContent = i === STEPS.length - 1 ? 'Finish' : 'Go to the Next Page';
+  // Once the account exists, going back before email verification would re-register: block it
+  $('back').style.visibility = (i === 0 || i >= STEPS.indexOf('emailCode')) ? 'hidden' : 'visible';
+  $('next').textContent = i === STEPS.length - 1 ? 'Finish' : 'Next';
   if (STEPS[i] === 'password') $('username').value = v('email');
 }
 function fail(msg) { const b = $('banner'); b.textContent = msg; b.style.display = 'block'; }
@@ -485,5 +480,4 @@ document.querySelectorAll('[data-resend]').forEach(b => b.onclick = async () => 
 
 show(0);
 </script>
-</body>
-</html>
+
