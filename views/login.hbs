@@ -150,8 +150,6 @@
       <div class="logo">Cha<span>ma</span></div>
       <h1 id="authTitle">Personal Account Login</h1>
       <p class="sub" id="authSubtitle">Sign in to access your Chama dashboard</p>
-      <!-- Progress bar — only visible during activation steps 5-8 -->
-      <div class="bar" id="activationBar" style="display:none;"><i id="barFill"></i></div>
     </div>
 
     <div class="card-body">
@@ -325,14 +323,9 @@
   const HOME_URL = '/dashboard';
   let token = sessionStorage.getItem('chama_token') || '';
 
-  // ── Activation step order & progress bar ──
+  // ── Activation step order ──
   const ACT_STEPS = ['emailCodeSection','phoneCodeSection','passportSection','nationalIdSection'];
   let actStep = 0;
-
-  function setBar(stepIndex) {
-    $('activationBar').style.display = 'block';
-    $('barFill').style.width = ((stepIndex + 1) / ACT_STEPS.length * 100) + '%';
-  }
 
   // ── Banner helpers ──
   function showBanner(msg, isSuccess) {
@@ -357,9 +350,16 @@
     ALL_SECTIONS.forEach(s => $(s).classList.remove('active'));
     $(id).classList.add('active');
     if (title) $('authTitle').textContent = title;
-    if (subtitle) $('authSubtitle').textContent = subtitle;
-    // Hide progress bar unless it's an activation step
-    if (!ACT_STEPS.includes(id)) $('activationBar').style.display = 'none';
+    const sub = $('authSubtitle');
+    if (sub) {
+      if (ACT_STEPS.includes(id) || !subtitle) {
+        sub.style.display = 'none';
+        sub.textContent = '';
+      } else {
+        sub.style.display = '';
+        sub.textContent = subtitle;
+      }
+    }
   }
 
   // ── API helper — uses real JWT Bearer token ──
@@ -410,8 +410,7 @@
     $('emailInputWrap').style.display = 'none';
     $('emailCode').value = '';
     $('emailNote').textContent = 'Click "Request Code" to receive your 6-digit email activation code.';
-    showSection('emailCodeSection', 'Account Activation', 'Complete the remaining steps to activate your account');
-    setBar(0);
+    showSection('emailCodeSection', 'Account Activation');
   }
 
   // ═══════════════════════════════════════════════
@@ -450,8 +449,7 @@
       $('phoneInputWrap').style.display = 'none';
       $('phoneCode').value = '';
       $('phoneNote').textContent = 'Click "Request Code" to receive your 6-digit SMS verification code.';
-      showSection('phoneCodeSection', 'Account Activation', 'Step 2 of 4 — Phone Verification');
-      setBar(1);
+      showSection('phoneCodeSection', 'Account Activation');
     } catch (e) { showBanner(e.message); }
     finally { this.disabled = false; this.textContent = 'Next'; }
   };
@@ -496,8 +494,7 @@
       // Real endpoint: /auth/verify-code (backed by authController.verifyCode + authenticate middleware)
       await api('/auth/verify-code', { channel: 'phone', code });
       actStep = 2;
-      showSection('passportSection', 'Account Activation', 'Step 3 of 4 — Passport Photo');
-      setBar(2);
+      showSection('passportSection', 'Account Activation');
     } catch (e) { showBanner(e.message); }
     finally { this.disabled = false; this.textContent = 'Next'; }
   };
@@ -598,8 +595,7 @@
     hideBanner();
     actStep = 3;
     resetIdView();
-    showSection('nationalIdSection', 'Account Activation', 'Step 4 of 4 — National ID');
-    setBar(3);
+    showSection('nationalIdSection', 'Account Activation');
   };
 
   $('passportShootBtn').onclick = async function () {
@@ -669,8 +665,7 @@
       await api('/kyc/passport-photo', f, true);
       actStep = 3;
       resetIdView();
-      showSection('nationalIdSection', 'Account Activation', 'Step 4 of 4 — National ID');
-      setBar(3);
+      showSection('nationalIdSection', 'Account Activation');
     } catch (e) { showBanner(e.message); }
     finally { this.disabled = false; this.textContent = 'Next'; }
   };

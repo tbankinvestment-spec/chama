@@ -254,7 +254,6 @@
     <div class="card-header">
       <div class="logo">Cha<span>ma</span></div>
       <h1>Create your Chama account</h1>
-      <div class="bar" style="margin-top: 14px; margin-bottom: 0;"><i id="bar"></i></div>
     </div>
 
     <div class="card-body">
@@ -602,7 +601,7 @@ const submitters = {
 function show(i) {
   cur = i;
   document.querySelectorAll('.step').forEach(s => s.classList.toggle('active', s.dataset.step === STEPS[i]));
-  $('bar').style.width = ((i + 1) / STEPS.length * 100) + '%';
+  if ($('bar')) $('bar').style.width = ((i + 1) / STEPS.length * 100) + '%';
   $('banner').style.display = 'none';
   $('back').style.visibility = i === 0 ? 'hidden' : 'visible';
 
