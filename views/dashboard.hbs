@@ -1,4 +1,4 @@
-{{!-- views/dashboard.hbs — Dashboard with full-width end-to-end header box --}}
+{{!-- views/dashboard.hbs — Dashboard with end-to-end header box and toggleable drawer nav --}}
 <style>
   /* ── CSS custom properties (mirrors project theme) ─────────────────── */
   :root {
@@ -15,7 +15,7 @@
     --navy-gradient:    linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
     --navy-sidebar:     linear-gradient(180deg, #182f4d 0%, #122238 100%);
     --navy-active:      rgba(79, 209, 197, 0.16);
-    --sidebar-w:        250px;
+    --sidebar-w:        260px;
     --topbar-h:         64px;
     --err:              #c53030;
     --line:             #e2e8f0;
@@ -80,6 +80,30 @@
     gap: 16px;
   }
 
+  /* Hamburger icon button to display/hide navigation */
+  .hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    cursor: pointer;
+    padding: 8px;
+    color: #ffffff;
+    transition: background .18s, transform .15s;
+  }
+  .hamburger:hover {
+    background: rgba(255, 255, 255, 0.24);
+  }
+  .hamburger:active {
+    transform: scale(0.96);
+  }
+  .hamburger svg {
+    width: 20px;
+    height: 20px;
+  }
+
   /* Main file header style logo */
   .topbar-logo {
     font-size: 22px;
@@ -107,34 +131,6 @@
   .topbar-logo .logo-badge svg {
     width: 16px;
     height: 16px;
-  }
-
-  .topbar-divider {
-    height: 26px;
-    width: 1px;
-    background: rgba(255, 255, 255, 0.2);
-  }
-
-  .topbar-title-block {
-    display: flex;
-    flex-direction: column;
-  }
-  .topbar-breadcrumb {
-    font-size: .75rem;
-    color: #cbd5e0;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    line-height: 1.2;
-  }
-  .topbar-breadcrumb span {
-    opacity: .7;
-  }
-  .topbar-title {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: #ffffff;
-    line-height: 1.2;
   }
 
   /* Top bar right elements */
@@ -236,27 +232,6 @@
     border-radius: 50%;
   }
 
-  /* Hamburger toggle */
-  .hamburger {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    cursor: pointer;
-    padding: 7px;
-    color: #ffffff;
-    transition: background .18s;
-  }
-  .hamburger:hover {
-    background: rgba(255, 255, 255, 0.22);
-  }
-  .hamburger svg {
-    width: 20px;
-    height: 20px;
-  }
-
   /* ─────────────────────────────────────────────────────────────────────
      BODY WRAPPER (SIDEBAR + MAIN)
   ───────────────────────────────────────────────────────────────────── */
@@ -264,10 +239,11 @@
     display: flex;
     min-height: calc(100vh - var(--topbar-h));
     position: relative;
+    width: 100%;
   }
 
   /* ─────────────────────────────────────────────────────────────────────
-     SIDEBAR
+     SIDEBAR / NAV (HIDDEN COMPLETELY BY DEFAULT)
   ───────────────────────────────────────────────────────────────────── */
   .sidebar {
     width: var(--sidebar-w);
@@ -279,13 +255,14 @@
     top: var(--topbar-h);
     left: 0;
     bottom: 0;
-    z-index: 200;
-    transition: width .25s ease, transform .25s ease;
+    z-index: 400;
+    transform: translateX(-100%); /* Completely hidden by default */
+    transition: transform .28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
     overflow: hidden;
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.08);
   }
-  .sidebar.collapsed {
-    width: 64px;
+  .sidebar.open {
+    transform: translateX(0); /* Displayed when icon button is clicked */
   }
 
   /* Profile block */
@@ -293,7 +270,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 22px 14px 18px;
+    padding: 24px 16px 20px;
     border-bottom: 1px solid rgba(255,255,255,0.08);
     flex-shrink: 0;
     position: relative;
@@ -316,9 +293,12 @@
     font-weight: 700;
     color: #4fd1c5;
     letter-spacing: 1px;
-    transition: width .25s, height .25s, font-size .25s;
     overflow: hidden;
     user-select: none;
+    transition: transform .15s;
+  }
+  .avatar:hover {
+    transform: scale(1.03);
   }
   .avatar img {
     width: 100%;
@@ -336,31 +316,13 @@
     bottom: 4px;
     right: 4px;
   }
-  .sidebar.collapsed .avatar {
-    width: 40px;
-    height: 40px;
-    font-size: .9rem;
-  }
-  .sidebar.collapsed .online-dot {
-    width: 10px;
-    height: 10px;
-    bottom: 1px;
-    right: 1px;
-  }
 
   .profile-name {
     color: #ffffff;
     font-weight: 600;
     font-size: .95rem;
     white-space: nowrap;
-    transition: opacity .2s;
     text-align: center;
-  }
-  .sidebar.collapsed .profile-name {
-    opacity: 0;
-    pointer-events: none;
-    height: 0;
-    overflow: hidden;
   }
 
   /* Avatar popup */
@@ -374,7 +336,7 @@
     border: 1px solid var(--line);
     border-radius: 10px;
     box-shadow: var(--shadow);
-    z-index: 350;
+    z-index: 450;
     min-width: 150px;
     overflow: hidden;
     margin-top: 6px;
@@ -424,9 +386,9 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 11px 18px;
-    color: rgba(255,255,255,0.72);
-    font-size: .93rem;
+    padding: 12px 20px;
+    color: rgba(255,255,255,0.75);
+    font-size: .95rem;
     font-weight: 500;
     transition: background .18s, color .18s;
     cursor: pointer;
@@ -449,21 +411,7 @@
     flex-shrink: 0;
   }
   .nav-link .link-label {
-    transition: opacity .2s;
     white-space: nowrap;
-  }
-  .sidebar.collapsed .nav-link .link-label {
-    opacity: 0;
-    pointer-events: none;
-  }
-  .sidebar.collapsed .nav-link {
-    justify-content: center;
-    padding: 13px 0;
-    border-left: none;
-  }
-  .sidebar.collapsed .nav-link.active {
-    border-left: none;
-    border-bottom: 2px solid #4fd1c5;
   }
 
   /* Badge */
@@ -480,15 +428,11 @@
     align-items: center;
     justify-content: center;
     padding: 0 5px;
-    transition: opacity .2s;
-  }
-  .sidebar.collapsed .badge {
-    opacity: 0;
   }
 
   /* Sidebar bottom */
   .sidebar-bottom {
-    padding: 12px 10px;
+    padding: 12px 14px;
     border-top: 1px solid rgba(255,255,255,0.08);
     display: flex;
     flex-direction: column;
@@ -499,10 +443,10 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 9px 12px;
+    padding: 10px 14px;
     border-radius: 8px;
     color: rgba(255,255,255,0.7);
-    font-size: .88rem;
+    font-size: .9rem;
     font-weight: 500;
     transition: background .18s, color .18s;
     white-space: nowrap;
@@ -517,16 +461,6 @@
     height: 16px;
     flex-shrink: 0;
   }
-  .sidebar-bottom .sb-btn .btn-label {
-    transition: opacity .2s;
-  }
-  .sidebar.collapsed .sb-btn .btn-label {
-    opacity: 0;
-    pointer-events: none;
-  }
-  .sidebar.collapsed .sb-btn {
-    justify-content: center;
-  }
   .logout-btn {
     color: rgba(252, 129, 129, 0.9) !important;
   }
@@ -536,29 +470,27 @@
   }
 
   /* ─────────────────────────────────────────────────────────────────────
-     MAIN CONTENT AREA
+     MAIN CONTENT AREA (TAKES FULL END-TO-END SCREEN WIDTH)
   ───────────────────────────────────────────────────────────────────── */
   .main {
     flex: 1;
-    margin-left: var(--sidebar-w);
+    margin-left: 0; /* Full screen width since nav is hidden by default */
+    width: 100%;
     display: flex;
     flex-direction: column;
     min-height: calc(100vh - var(--topbar-h));
-    transition: margin-left .25s ease;
     background: var(--bg);
-  }
-  .sidebar.collapsed ~ .main {
-    margin-left: 64px;
   }
 
   .content {
     flex: 1;
-    padding: 28px;
+    padding: 32px 36px;
+    width: 100%;
   }
   .greeting {
-    font-size: 1rem;
+    font-size: 1.05rem;
     color: var(--muted);
-    margin-bottom: 22px;
+    margin-bottom: 24px;
   }
   .greeting strong {
     color: var(--text);
@@ -577,26 +509,27 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 240px;
+    min-height: 260px;
     color: var(--muted);
-    font-size: .95rem;
+    font-size: 1rem;
     flex-direction: column;
     gap: 12px;
   }
   .card-empty svg {
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
     opacity: .25;
   }
 
-  /* ── Mobile overlay ─────────────────────────────────────────────── */
+  /* ── Overlay (shown when sidebar is open) ────────────────────────── */
   .overlay {
     display: none;
     position: fixed;
     inset: 0;
     top: var(--topbar-h);
-    background: rgba(0,0,0,0.45);
-    z-index: 150;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+    z-index: 350;
   }
   .overlay.open {
     display: block;
@@ -607,27 +540,11 @@
     .topbar {
       padding: 0 16px;
     }
-    .topbar-divider {
-      display: none;
-    }
-    .topbar-breadcrumb {
-      display: none;
-    }
     .topbar-search {
       display: none;
     }
-    .sidebar {
-      transform: translateX(-100%);
-      width: var(--sidebar-w) !important;
-    }
-    .sidebar.mobile-open {
-      transform: translateX(0);
-    }
-    .main {
-      margin-left: 0 !important;
-    }
     .content {
-      padding: 18px;
+      padding: 20px 16px;
     }
   }
 </style>
@@ -637,7 +554,8 @@
   <!-- ══════════════════ TOP BAR (END TO END SCREEN HEADER) ══════════════════ -->
   <header class="topbar" id="topbar">
     <div class="topbar-left">
-      <button class="hamburger" id="hamburger" aria-label="Toggle navigation menu">
+      <!-- Icon button: displays/hides the navigation sidebar -->
+      <button class="hamburger" id="hamburger" aria-label="Toggle navigation menu" title="Toggle navigation">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="3" y1="6" x2="21" y2="6"/>
           <line x1="3" y1="12" x2="21" y2="12"/>
@@ -654,15 +572,6 @@
         </div>
         Cha<span>ma</span>
       </a>
-
-      <div class="topbar-divider"></div>
-
-      <div class="topbar-title-block">
-        <div class="topbar-breadcrumb">
-          Home <span>›</span> <span id="topBreadcrumb">Dashboard</span>
-        </div>
-        <div class="topbar-title" id="topTitle">Dashboard</div>
-      </div>
     </div>
 
     <div class="topbar-right">
@@ -690,8 +599,8 @@
   <!-- ══════════════════ APP BODY (SIDEBAR + MAIN) ══════════════════ -->
   <div class="app-body">
 
-    <!-- ── Left sidebar ── -->
-    <aside class="sidebar" id="sidebar">
+    <!-- ── Left sidebar / navigation (hidden completely by default) ── -->
+    <aside class="sidebar" id="sidebar" aria-label="Main Navigation">
 
       <!-- Profile block -->
       <div class="sidebar-profile">
@@ -770,11 +679,12 @@
 
       <!-- Bottom controls -->
       <div class="sidebar-bottom">
-        <button class="sb-btn" id="collapseBtn" title="Collapse sidebar">
+        <button class="sb-btn" id="closeSidebarBtn" title="Close navigation">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/>
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
-          <span class="btn-label">Collapse</span>
+          <span class="btn-label">Close Menu</span>
         </button>
         <a class="sb-btn logout-btn" href="/logout" title="Logout">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -788,10 +698,10 @@
 
     </aside>
 
-    <!-- Overlay (mobile) -->
+    <!-- Dim overlay behind open sidebar -->
     <div class="overlay" id="overlay"></div>
 
-    <!-- ── Main content area ── -->
+    <!-- ── Main content area (Full Width) ── -->
     <div class="main" id="mainArea">
       <main class="content">
 
@@ -806,7 +716,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/>
             </svg>
-            <span>Dashboard — Nothing to show yet.</span>
+            <span id="stateText">Dashboard — Nothing to show yet.</span>
           </div>
         </div>
 
@@ -819,54 +729,29 @@
 <script>
 (function () {
   const $ = id => document.getElementById(id);
-  const sidebar     = $('sidebar');
-  const overlay     = $('overlay');
-  const hamburger   = $('hamburger');
-  const collapseBtn = $('collapseBtn');
+  const sidebar        = $('sidebar');
+  const overlay        = $('overlay');
+  const hamburger      = $('hamburger');
+  const closeSidebarBtn = $('closeSidebarBtn');
 
-  // ── Collapse (desktop) ───────────────────────────────────────────────
-  let collapsed = JSON.parse(localStorage.getItem('sidebarCollapsed') || 'false');
-  function applyCollapse() {
-    sidebar.classList.toggle('collapsed', collapsed);
-    collapseBtn.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
-    collapseBtn.querySelector('.btn-label').textContent = collapsed ? 'Expand' : 'Collapse';
-    collapseBtn.querySelectorAll('polyline').forEach((p, i) => {
-      if (collapsed) {
-        p.setAttribute('points', i === 0 ? '13 17 18 12 13 7' : '6 17 11 12 6 7');
-      } else {
-        p.setAttribute('points', i === 0 ? '11 17 6 12 11 7' : '18 17 13 12 18 7');
-      }
-    });
+  // ── Toggle Navigation (Sidebar) on Icon Button Click ──────────────────
+  function toggleNav() {
+    const isOpen = sidebar.classList.toggle('open');
+    overlay.classList.toggle('open', isOpen);
+    document.body.style.overflow = isOpen ? 'hidden' : '';
   }
-  applyCollapse();
 
-  collapseBtn.addEventListener('click', () => {
-    collapsed = !collapsed;
-    localStorage.setItem('sidebarCollapsed', JSON.stringify(collapsed));
-    applyCollapse();
-  });
-
-  // ── Hamburger (mobile toggle) ────────────────────────────────────────
-  function openMobile() {
-    sidebar.classList.add('mobile-open');
-    overlay.classList.add('open');
-    document.body.style.overflow = 'hidden';
-  }
-  function closeMobile() {
-    sidebar.classList.remove('mobile-open');
+  function closeNav() {
+    sidebar.classList.remove('open');
     overlay.classList.remove('open');
     document.body.style.overflow = '';
   }
-  hamburger.addEventListener('click', () => {
-    if (window.innerWidth <= 768) {
-      sidebar.classList.contains('mobile-open') ? closeMobile() : openMobile();
-    } else {
-      collapsed = !collapsed;
-      localStorage.setItem('sidebarCollapsed', JSON.stringify(collapsed));
-      applyCollapse();
-    }
-  });
-  overlay.addEventListener('click', closeMobile);
+
+  hamburger.addEventListener('click', toggleNav);
+  overlay.addEventListener('click', closeNav);
+  if (closeSidebarBtn) {
+    closeSidebarBtn.addEventListener('click', closeNav);
+  }
 
   // ── Avatar popup ─────────────────────────────────────────────────────
   const avatarWrap  = $('avatarWrap');
@@ -889,32 +774,32 @@
 
   // ── Page switcher (SPA-lite) ─────────────────────────────────────────
   const pages = {
-    dashboard:     { title: 'Dashboard',     crumb: 'Dashboard' },
-    groups:        { title: 'Groups',        crumb: 'Groups' },
-    reports:       { title: 'Reports',       crumb: 'Reports' },
-    notifications: { title: 'Notifications', crumb: 'Notifications' },
-    settings:      { title: 'Settings',      crumb: 'Settings' },
+    dashboard:     { title: 'Dashboard' },
+    groups:        { title: 'Groups' },
+    reports:       { title: 'Reports' },
+    notifications: { title: 'Notifications' },
+    settings:      { title: 'Settings' },
   };
 
   function showPage(key) {
     const p = pages[key] || pages.dashboard;
-    $('topTitle').textContent       = p.title;
-    $('topBreadcrumb').textContent  = p.crumb;
     document.querySelectorAll('.nav-link').forEach(l =>
       l.classList.toggle('active', l.dataset.page === key)
     );
-    $('emptyState').innerHTML = `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:40px;height:40px;opacity:.22">
-        <rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/>
-      </svg>
-      <span>${p.title} — Nothing to show yet.</span>`;
-    if (window.innerWidth <= 768) closeMobile();
+    const stateText = $('stateText');
+    if (stateText) {
+      stateText.textContent = `${p.title} — Nothing to show yet.`;
+    }
+    closeNav();
   }
 
   document.querySelectorAll('.nav-link[data-page]').forEach(link => {
     link.addEventListener('click', e => {
       const page = link.dataset.page;
-      if (page === 'dashboard') return;
+      if (page === 'dashboard') {
+        closeNav();
+        return;
+      }
       e.preventDefault();
       showPage(page);
     });
