@@ -1,33 +1,17 @@
 // routes/logauth.js
-// Session-based auth routes (login / register / logout).
+// Page routes for login and registration views.
 
 const express = require("express");
 const router = express.Router();
-const authController = require("../controllers/logauthController");
-const {
-  loginBlock,
-  registerBlock,
-  forgotPinSendBlock,
-  forgotPinVerifyBlock,
-} = require("../middlewares/trafficLimiter");
 
-// Login form + submit (protected against brute-force & CPU flooding)
-console.log("[routes/logauth] Registering login routes (GET/POST /login)");
-router.get("/login", authController.showLogin);
-router.post("/login", loginBlock, authController.handleLogin);
+// GET /register — show the multi-step registration form
+router.get("/register", (req, res) => {
+  res.render("register", { title: "Create your Chama account" });
+});
 
-// Forgot PIN verification workflow (protected against SMS flood & code brute-force)
-console.log("[routes/logauth] Registering forgot-pin routes (/forgot-pin/send, /forgot-pin/verify)");
-router.post("/forgot-pin/send", forgotPinSendBlock, authController.sendForgotPinCode);
-router.post("/forgot-pin/verify", forgotPinVerifyBlock, authController.verifyForgotPinCode);
-
-// Register form + submit (protected against account-creation spam)
-console.log("[routes/logauth] Registering register routes (GET/POST /register)");
-router.get("/register", authController.showRegister);
-router.post("/register", registerBlock, authController.handleRegister);
-
-// Logout (destroys session)
-console.log("[routes/logauth] Registering logout route (GET /logout)");
-router.get("/logout", authController.handleLogout);
+// GET /login — show standalone login page
+router.get("/login", (req, res) => {
+  res.render("login", { title: "Personal Account Login" });
+});
 
 module.exports = router;

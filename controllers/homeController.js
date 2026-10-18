@@ -1,7 +1,9 @@
 // controllers/homeController.js
-// Thin controller for the marketing home page.
-// Renders views/home.hbs wrapped in views/layouts/main.hbs with a title.
+// Handles the landing / home page rendering.
 
 exports.showHome = (req, res) => {
-  res.render("home", { title: "Home" });
+  res.render("home", {
+    title: "Welcome",
+    layout: "main",
+  });
 };

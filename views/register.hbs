@@ -196,6 +196,58 @@
     font-size: .9rem;
     color: var(--muted);
   }
+
+  /* Confirmation / Review Step Styles */
+  .review-section {
+    background: #f8fafc;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+  .review-section h3 {
+    margin: 0 0 10px;
+    font-size: .88rem;
+    color: var(--brand);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-weight: 700;
+  }
+  .review-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 14px;
+    font-size: .88rem;
+  }
+  @media (max-width: 480px) {
+    .review-grid { grid-template-columns: 1fr; }
+  }
+  .review-item {
+    display: flex;
+    flex-direction: column;
+  }
+  .review-label {
+    font-size: .74rem;
+    color: #718096;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .review-val {
+    color: var(--navy);
+    font-weight: 600;
+    word-break: break-word;
+    margin-top: 2px;
+  }
+  .review-contact-header {
+    grid-column: 1 / -1;
+    font-weight: 700;
+    color: var(--navy);
+    border-bottom: 1px dashed var(--line);
+    padding-bottom: 4px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    font-size: .85rem;
+  }
 </style>
 <div class="wrap">
   <div class="card">
@@ -253,6 +305,56 @@
         <p class="note">At least 8 characters, with a letter and a number.</p>
       </section>
 
+      <!-- 5. Confirmation of registration form -->
+      <section class="step" data-step="confirm">
+        <h2>Confirm Registration Details</h2>
+        <p class="note" style="margin-top: -6px; margin-bottom: 16px;">
+          Please review your details carefully before submitting your Chama account.
+        </p>
+
+        <div class="review-section">
+          <h3>Personal Information</h3>
+          <div class="review-grid">
+            <div class="review-item"><span class="review-label">Full Name</span><span class="review-val" id="rev_fullName"></span></div>
+            <div class="review-item"><span class="review-label">Date of Birth</span><span class="review-val" id="rev_dob"></span></div>
+            <div class="review-item"><span class="review-label">Gender</span><span class="review-val" id="rev_gender"></span></div>
+            <div class="review-item"><span class="review-label">Phone Number</span><span class="review-val" id="rev_phone"></span></div>
+            <div class="review-item" style="grid-column: 1 / -1;"><span class="review-label">Email Address</span><span class="review-val" id="rev_email"></span></div>
+          </div>
+        </div>
+
+        <div class="review-section">
+          <h3>Location Details</h3>
+          <div class="review-grid">
+            <div class="review-item"><span class="review-label">County</span><span class="review-val" id="rev_county"></span></div>
+            <div class="review-item"><span class="review-label">Sub County</span><span class="review-val" id="rev_subCounty"></span></div>
+            <div class="review-item"><span class="review-label">Town</span><span class="review-val" id="rev_town"></span></div>
+            <div class="review-item"><span class="review-label">Street / Road</span><span class="review-val" id="rev_street"></span></div>
+          </div>
+        </div>
+
+        <div class="review-section">
+          <h3>Close Persons of Contact</h3>
+          <div class="review-grid">
+            <div class="review-contact-header">
+              Person One (<span id="rev_c0_rel"></span>)
+            </div>
+            <div class="review-item"><span class="review-label">Name</span><span class="review-val" id="rev_c0_name"></span></div>
+            <div class="review-item"><span class="review-label">Gender</span><span class="review-val" id="rev_c0_gender"></span></div>
+            <div class="review-item"><span class="review-label">Phone</span><span class="review-val" id="rev_c0_phone"></span></div>
+            <div class="review-item"><span class="review-label">Email</span><span class="review-val" id="rev_c0_email"></span></div>
+
+            <div class="review-contact-header" style="margin-top: 10px;">
+              Person Two (<span id="rev_c1_rel"></span>)
+            </div>
+            <div class="review-item"><span class="review-label">Name</span><span class="review-val" id="rev_c1_name"></span></div>
+            <div class="review-item"><span class="review-label">Gender</span><span class="review-val" id="rev_c1_gender"></span></div>
+            <div class="review-item"><span class="review-label">Phone</span><span class="review-val" id="rev_c1_phone"></span></div>
+            <div class="review-item"><span class="review-label">Email</span><span class="review-val" id="rev_c1_email"></span></div>
+          </div>
+        </div>
+      </section>
+
 
 
       <div class="banner" id="banner" role="alert"></div>
@@ -270,10 +372,9 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const STEPS = ['personal','location','contacts','password'];
+const STEPS = ['personal','location','contacts','password','confirm'];
 const HOME_URL = '/dashboard';
-const phoneRx = /^(?:\+254|0)[17]\d{8}$/;
-const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const emailRx = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 let cur = 0, token = sessionStorage.getItem('chama_token') || '';
 
 // Build the two contact-person blocks
@@ -284,8 +385,57 @@ $('contacts').innerHTML = ['One','Two'].map((n,i) => `<h3>Person ${n}</h3><div c
     ? `<select id="c${i}_${k}"><option value="">Select…</option><option>Male</option><option>Female</option><option>Other</option></select>`
     : `<input id="c${i}_${k}" type="${t}">`) + `</div>`).join('') + `</div>`).join('');
 
-const v = id => $(id).value.trim();
-const normPhone = p => p.replace(/^0/, '+254');
+const v = id => ($(id) ? $(id).value.trim() : '');
+
+// Kenyan Phone Normalizer (standardizes to E.164 +254...)
+function cleanAndNormalizePhone(phone) {
+  if (!phone || typeof phone !== 'string') return '';
+  let cleaned = phone.replace(/[\s\-().]/g, '').trim();
+  if (cleaned.startsWith('+254')) {
+    cleaned = cleaned.substring(1);
+  } else if (cleaned.startsWith('0')) {
+    cleaned = '254' + cleaned.substring(1);
+  } else if (cleaned.startsWith('7') || cleaned.startsWith('1')) {
+    if (cleaned.length === 9) cleaned = '254' + cleaned;
+  }
+  const regex = /^254(7\d{8}|1\d{8})$/;
+  return regex.test(cleaned) ? `+${cleaned}` : '';
+}
+
+// Standard Email Normalizer (trimmed lowercase)
+function cleanAndNormalizeEmail(email) {
+  if (!email || typeof email !== 'string') return '';
+  const trimmed = email.trim().toLowerCase();
+  return emailRx.test(trimmed) ? trimmed : '';
+}
+
+// Backward-compatibility alias
+const normPhone = p => cleanAndNormalizePhone(p);
+
+function populateReview() {
+  $('rev_fullName').textContent = v('fullName') || '-';
+  $('rev_dob').textContent = v('dob') || '-';
+  $('rev_gender').textContent = v('gender') || '-';
+  $('rev_phone').textContent = cleanAndNormalizePhone(v('phone')) || '-';
+  $('rev_email').textContent = cleanAndNormalizeEmail(v('email')) || '-';
+
+  $('rev_county').textContent = v('county') || '-';
+  $('rev_subCounty').textContent = v('subCounty') || '-';
+  $('rev_town').textContent = v('town') || '-';
+  $('rev_street').textContent = v('street') || '-';
+
+  $('rev_c0_name').textContent = v('c0_name') || '-';
+  $('rev_c0_rel').textContent = v('c0_relationship') || 'Contact';
+  $('rev_c0_gender').textContent = v('c0_gender') || '-';
+  $('rev_c0_phone').textContent = cleanAndNormalizePhone(v('c0_phone')) || '-';
+  $('rev_c0_email').textContent = cleanAndNormalizeEmail(v('c0_email')) || '-';
+
+  $('rev_c1_name').textContent = v('c1_name') || '-';
+  $('rev_c1_rel').textContent = v('c1_relationship') || 'Contact';
+  $('rev_c1_gender').textContent = v('c1_gender') || '-';
+  $('rev_c1_phone').textContent = cleanAndNormalizePhone(v('c1_phone')) || '-';
+  $('rev_c1_email').textContent = cleanAndNormalizeEmail(v('c1_email')) || '-';
+}
 
 // ---------- validation (returns error message or '') ----------
 const validators = {
@@ -295,30 +445,86 @@ const validators = {
     const age = (Date.now() - new Date(v('dob'))) / 31557600000;
     if (age < 18) return 'You must be at least 18 years old.';
     if (!v('gender')) return 'Select your gender.';
-    if (!phoneRx.test(v('phone'))) return 'Enter a valid Kenyan phone number.';
-    if (v('phone') !== v('phone2')) return 'Phone numbers do not match.';
-    if (!emailRx.test(v('email'))) return 'Enter a valid email address.';
-    if (v('email').toLowerCase() !== v('email2').toLowerCase()) return 'Email addresses do not match.';
+
+    const ownerPhone = cleanAndNormalizePhone(v('phone'));
+    if (!ownerPhone) return 'Enter a valid Kenyan phone number (e.g. 07XXXXXXXX, 01XXXXXXXX, or +254...).';
+    const ownerPhone2 = cleanAndNormalizePhone(v('phone2'));
+    if (!ownerPhone2 || ownerPhone !== ownerPhone2) return 'Personal phone numbers do not match.';
+
+    const ownerEmail = cleanAndNormalizeEmail(v('email'));
+    if (!ownerEmail) return 'Enter a valid standard email address (e.g. name@example.com).';
+    const ownerEmail2 = cleanAndNormalizeEmail(v('email2'));
+    if (!ownerEmail2 || ownerEmail !== ownerEmail2) return 'Personal email addresses do not match.';
+
     return '';
   },
   location() {
     return ['county','subCounty','town','street'].every(k => v(k)) ? '' : 'Fill in all location fields.';
   },
   contacts() {
+    const ownerPhone = cleanAndNormalizePhone(v('phone'));
+    const ownerEmail = cleanAndNormalizeEmail(v('email'));
+
+    const contactPhones = [];
+    const contactEmails = [];
+
     for (let i = 0; i < 2; i++) {
       const g = k => v(`c${i}_${k}`), who = `Person ${i ? 'Two' : 'One'}`;
       if (!g('name') || !g('gender') || !g('relationship')) return `${who}: complete name, gender and relationship.`;
-      if (!phoneRx.test(g('phone'))) return `${who}: enter a valid phone number.`;
-      if (g('phone') !== g('phone2')) return `${who}: phone numbers do not match.`;
-      if (!emailRx.test(g('email'))) return `${who}: enter a valid email.`;
-      if (g('email').toLowerCase() !== g('email2').toLowerCase()) return `${who}: email addresses do not match.`;
+
+      // 1. Phone validation
+      const cPhone = cleanAndNormalizePhone(g('phone'));
+      if (!cPhone) return `${who}: enter a valid Kenyan phone number (e.g. 07XXXXXXXX, 01XXXXXXXX, or +254...).`;
+      const cPhone2 = cleanAndNormalizePhone(g('phone2'));
+      if (!cPhone2 || cPhone !== cPhone2) return `${who}: phone numbers do not match.`;
+
+      // Anti-collision: Contact Phone cannot match Personal Phone
+      if (cPhone === ownerPhone) {
+        return `${who} phone number cannot match your personal phone number.`;
+      }
+      contactPhones.push(cPhone);
+
+      // 2. Email validation
+      const cEmail = cleanAndNormalizeEmail(g('email'));
+      if (!cEmail) return `${who}: enter a valid standard email address (e.g. name@example.com).`;
+      const cEmail2 = cleanAndNormalizeEmail(g('email2'));
+      if (!cEmail2 || cEmail !== cEmail2) return `${who}: email addresses do not match.`;
+
+      // Anti-collision: Contact Email cannot match Personal Email
+      if (cEmail === ownerEmail) {
+        return `${who} email address cannot match your personal email address.`;
+      }
+      contactEmails.push(cEmail);
     }
-    if (v('c0_phone') === v('c1_phone')) return 'The two contacts need different phone numbers.';
+
+    // Anti-collision: Contact 1 Phone cannot match Contact 2 Phone
+    if (contactPhones[0] === contactPhones[1]) {
+      return 'Person One and Person Two cannot have matching phone numbers.';
+    }
+
+    // Anti-collision: Contact 1 Email cannot match Contact 2 Email
+    if (contactEmails[0] === contactEmails[1]) {
+      return 'Person One and Person Two cannot have matching email addresses.';
+    }
+
     return '';
   },
   password() {
-    if (v('pw').length < 8 || !/[A-Za-z]/.test(v('pw')) || !/\d/.test(v('pw'))) return 'Password needs 8+ characters with a letter and a number.';
+    // Re-verify date of birth to ensure applicant is valid and at least 18
+    if (!v('dob')) return 'Date of birth is required.';
+    const birthDate = new Date(v('dob'));
+    if (isNaN(birthDate.getTime())) return 'Please enter a valid date of birth.';
+    if (birthDate > new Date()) return 'Date of birth cannot be in the future.';
+    const age = (Date.now() - birthDate.getTime()) / 31557600000;
+    if (age < 18) return 'You must be at least 18 years old to register.';
+
+    if (v('pw').length < 8 || !/[A-Za-z]/.test(v('pw')) || !/\d/.test(v('pw'))) {
+      return 'Password needs 8+ characters with a letter and a number.';
+    }
     return v('pw') === v('pw2') ? '' : 'Passwords do not match.';
+  },
+  confirm() {
+    return '';
   },
   emailCode() { return /^\d{6}$/.test(v('emailCode')) ? '' : 'Enter the 6-digit code.'; },
   phoneCode() { return /^\d{6}$/.test(v('phoneCode')) ? '' : 'Enter the 6-digit code.'; },
@@ -336,11 +542,32 @@ async function api(path, body, isForm) {
   return data;
 }
 
-// What happens when "Next" is pressed on each step
+// Persist the registration into the pendingverifiedaccount collection.
+async function saveRegistration() {
+  const res = await fetch('/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: v('fullName'), dob: v('dob'), gender: v('gender'),
+      phone: cleanAndNormalizePhone(v('phone')), email: cleanAndNormalizeEmail(v('email')),
+      location: { county: v('county'), subCounty: v('subCounty'), town: v('town'), street: v('street') },
+      contacts: [0,1].map(i => ({ name: v(`c${i}_name`), gender: v(`c${i}_gender`), relationship: v(`c${i}_relationship`),
+        phone: cleanAndNormalizePhone(v(`c${i}_phone`)), email: cleanAndNormalizeEmail(v(`c${i}_email`)) })),
+      password: $('pw').value
+    })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || data.error || 'Could not save your registration. Please try again.');
+  if (data.token) sessionStorage.setItem('chama_token', data.token);
+  sessionStorage.setItem('pendingEmail', cleanAndNormalizeEmail(v('email')));
+  return data;
+}
+
+// What happens when "Next", "Confirm", or "Submit" is pressed on each step
 const submitters = {
   async personal() {
-    const emailVal = v('email').toLowerCase();
-    const phoneVal = normPhone(v('phone'));
+    const emailVal = cleanAndNormalizeEmail(v('email'));
+    const phoneVal = cleanAndNormalizePhone(v('phone'));
     $('next').textContent = 'Checking…';
     const res = await fetch('/api/auth/check-personal-info', {
       method: 'POST',
@@ -358,28 +585,15 @@ const submitters = {
     }
     // All clear — let show(cur+1) proceed normally
   },
+  // As soon as the password is confirmed, write the registration to the database.
   async password() {
-    // Call the real /auth/register endpoint (backed by authController + authMiddleware)
-    const res = await fetch('/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fullName: v('fullName'), dob: v('dob'), gender: v('gender'),
-        phone: normPhone(v('phone')), email: v('email').toLowerCase(),
-        location: { county: v('county'), subCounty: v('subCounty'), town: v('town'), street: v('street') },
-        contacts: [0,1].map(i => ({ name: v(`c${i}_name`), gender: v(`c${i}_gender`), relationship: v(`c${i}_relationship`),
-          phone: normPhone(v(`c${i}_phone`)), email: v(`c${i}_email`).toLowerCase() })),
-        password: $('pw').value
-      })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || data.error || 'Registration failed. Please try again.');
-    // Store real JWT token and pending email so login page continues activation
-    if (data.token) {
-      sessionStorage.setItem('chama_token', data.token);
-    }
-    sessionStorage.setItem('pendingEmail', v('email').toLowerCase());
-    // Redirect to login to complete steps 5-8
+    $('next').textContent = 'Saving…';
+    await saveRegistration();
+  },
+  async confirm() {
+    // Already saved right after the password step — continue to login to finish
+    // steps 5-8.
+    sessionStorage.setItem('pendingEmail', cleanAndNormalizeEmail(v('email')));
     location.href = '/login';
   }
 };
@@ -391,18 +605,36 @@ function show(i) {
   $('bar').style.width = ((i + 1) / STEPS.length * 100) + '%';
   $('banner').style.display = 'none';
   $('back').style.visibility = i === 0 ? 'hidden' : 'visible';
-  $('next').textContent = i === STEPS.length - 1 ? 'Finish' : 'Next';
-  if (STEPS[i] === 'password') $('username').value = v('email');
+
+  if (STEPS[i] === 'confirm') {
+    populateReview();
+    $('next').textContent = 'Submit';
+  } else if (STEPS[i] === 'password') {
+    $('username').value = cleanAndNormalizeEmail(v('email'));
+    $('next').textContent = 'Confirm';
+  } else {
+    $('next').textContent = 'Next';
+  }
 }
 function fail(msg) { const b = $('banner'); b.textContent = msg; b.style.display = 'block'; }
 
 $('next').onclick = async () => {
-  const name = STEPS[cur], err = validators[name]();
+  const name = STEPS[cur], err = validators[name] ? validators[name]() : '';
   if (err) return fail(err);
   $('next').disabled = true;
-  try { if (submitters[name]) await submitters[name](); show(cur + 1); }
-  catch (e) { fail(e.message); }
-  finally { $('next').disabled = false; }
+  try {
+    if (submitters[name]) await submitters[name]();
+    if (cur + 1 < STEPS.length) show(cur + 1);
+  } catch (e) {
+    fail(e.message);
+  } finally {
+    $('next').disabled = false;
+    if (STEPS[cur] === 'confirm') {
+      $('next').textContent = 'Submit';
+    } else if (STEPS[cur] === 'password') {
+      $('next').textContent = 'Confirm';
+    }
+  }
 };
 $('back').onclick = () => cur > 0 && show(cur - 1);
 

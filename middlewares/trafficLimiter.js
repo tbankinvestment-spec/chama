@@ -131,13 +131,22 @@ const loginBlock = createLimiter({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 5,
   keyGenerator: (req) => {
-    const ip = req.socket.remoteAddress || "ip";
-    const identifier = (req.body.phone || req.body.email || "").toString().trim().toLowerCase();
+    const forwarded = req.headers["x-forwarded-for"];
+    const ip = forwarded ? forwarded.split(",")[0].trim() : (req.socket.remoteAddress || "127.0.0.1");
+    const identifier = (req.body?.phone || req.body?.email || "").toString().trim().toLowerCase();
     return `${ip}:${identifier || "anonymous"}`;
   },
   onLimitExceeded: (req, res, retryAfter) => {
     const minutes = Math.ceil(retryAfter / 60);
     const msg = `Too many login attempts. For security, please wait ${minutes} minute(s) before trying again.`;
+    if (req.xhr || req.headers.accept?.includes("json") || req.is("json")) {
+      return res.status(429).json({
+        success: false,
+        error: msg,
+        message: msg,
+        retryAfter,
+      });
+    }
     return res.status(429).render("login", {
       title: "Login",
       isRegister: false,
@@ -146,16 +155,16 @@ const loginBlock = createLimiter({
         email: msg,
       },
       formData: {
-        phone: req.body.phone,
-        countryCode: req.body.countryCode || "+254",
-        email: req.body.email,
+        phone: req.body?.phone,
+        countryCode: req.body?.countryCode || "+254",
+        email: req.body?.email,
       },
     });
   },
 });
 
 /**
- * 2. Registration Traffic Block (login.hbs - POST /register)
+ * 2. Registration Traffic Block (register.hbs / login.hbs - POST /register, POST /auth/register)
  * Prevents automated account creation spam & session store bloat.
  * Limit: 5 registration submissions per 30 minutes per IP.
  */
@@ -163,20 +172,32 @@ const registerBlock = createLimiter({
   prefix: "auth:register",
   windowMs: 30 * 60 * 1000, // 30 minutes
   max: 5,
-  keyGenerator: (req) => req.socket.remoteAddress || "ip",
+  keyGenerator: (req) => {
+    const forwarded = req.headers["x-forwarded-for"];
+    return forwarded ? forwarded.split(",")[0].trim() : (req.socket.remoteAddress || "127.0.0.1");
+  },
   onLimitExceeded: (req, res, retryAfter) => {
     const minutes = Math.ceil(retryAfter / 60);
-    return res.status(429).render("login", {
-      title: "Register",
-      isRegister: true,
+    const msg = `Too many accounts registered from this connection. Please wait ${minutes} minute(s).`;
+    if (req.xhr || req.headers.accept?.includes("json") || req.is("json")) {
+      return res.status(429).json({
+        success: false,
+        error: msg,
+        message: msg,
+        retryAfter,
+      });
+    }
+    return res.status(429).render("register", {
+      title: "Create your Chama account",
+      error: msg,
       errors: {
-        name: `Too many accounts registered from this connection. Please wait ${minutes} minute(s).`,
+        name: msg,
       },
       formData: {
-        name: req.body.name,
-        email: req.body.email,
-        phone: req.body.phone,
-        countryCode: req.body.countryCode,
+        name: req.body?.name || req.body?.fullName,
+        email: req.body?.email,
+        phone: req.body?.phone,
+        countryCode: req.body?.countryCode,
       },
     });
   },

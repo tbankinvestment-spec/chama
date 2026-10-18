@@ -1,75 +1,92 @@
-// config/db.js
-// Mongoose MongoDB connection setup.
-// - Reads MONGODB_URI from .env (already populated for your cluster).
-// - Logs "MongoDB connected" on success.
-// - On failure (e.g. no internet, wrong URI), logs a WARNING instead of
-//   crashing the process — sessions + demo data still work fully in-memory,
-//   so you can develop the UI without an active DB.
-// - All models in ../models/ share this single mongoose connection.
+const mongoose = require('mongoose');
 
-const mongoose = require("mongoose");
+// Disable buffering so queries fail immediately instead of hanging when Mongo is disconnected
+mongoose.set('bufferCommands', false);
 
-// Connection options optimized for MongoDB Atlas stability.
-// These prevent the "connect/disconnect" loop caused by Atlas closing
-// idle connections and network latency spikes.
-const MONGODB_OPTIONS = {
-  serverSelectionTimeoutMS: 10000,   // Increased to 10s for TLS handshake
-  socketTimeoutMS: 45000,            // Close sockets after 45s of inactivity
-  connectTimeoutMS: 20000,           // Increased initial connection timeout
-  maxPoolSize: 10,                   // Max connections in pool
-  minPoolSize: 2,                    // Keep at least 2 connections warm
-  maxIdleTimeMS: 30000,              // Close idle connections after 30s
-  heartbeatFrequencyMS: 10000,       // Check server health every 10s
-  tls: true,                         // Explicitly enable TLS/SSL
-  tlsAllowInvalidHostnames: false,   // Set true only if DNS SAN mismatch
-  tlsAllowInvalidCertificates: false, // Set true only for testing self-signed
-};
+let isConnecting = false;
+let reconnectTimer = null;
 
-function connectDB() {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) {
-    console.warn(
-      "[DB] MONGODB_URI is not set. App will run in in-memory demo mode."
-    );
-    return;
+// Map low-level driver errors to an actionable hint for the developer.
+function explainMongoError(error) {
+  const msg = String((error && error.message) || error);
+  if (/IP that isn't whitelisted|whitelist|not allowed to access/i.test(msg)) {
+    return "Your current IP is not allowed. Add it in Atlas → Network Access (use 0.0.0.0/0 for local development).";
   }
-
-  mongoose
-    .connect(uri, MONGODB_OPTIONS)
-    .then(() => console.log("[DB] MongoDB connected"))
-    .catch((err) =>
-      console.warn(
-        "[DB] MongoDB not connected, running with in-memory session data:",
-        err.message
-      )
-    );
-
-  // Event listeners for connection lifecycle — these log every
-  // connect / disconnect / error so you can diagnose instability.
-  mongoose.connection.on("connected", () => {
-    console.log("[DB] MongoDB connection established");
-  });
-
-  mongoose.connection.on("error", (err) => {
-    console.error("[DB] MongoDB connection error:", err.message);
-  });
-
-  mongoose.connection.on("disconnected", () => {
-    console.warn("[DB] MongoDB disconnected! Attempting to reconnect in 5s...");
-    setTimeout(() => {
-      if (mongoose.connection.readyState === 0) {
-        mongoose
-          .connect(uri, MONGODB_OPTIONS)
-          .catch((err) =>
-            console.warn("[DB] MongoDB reconnection failed:", err.message)
-          );
-      }
-    }, 5000);
-  });
-
-  mongoose.connection.on("reconnected", () => {
-    console.log("[DB] MongoDB reconnected successfully");
-  });
+  if (/bad auth|Authentication failed/i.test(msg)) {
+    return 'Wrong database username/password. Check the credentials in MONGODB_URI against Atlas → Database Access.';
+  }
+  if (/tlsv1 alert|SSL alert|ssl3_read_bytes|self.signed|certificate/i.test(msg)) {
+    return 'The TLS handshake to Atlas failed. This is usually caused by antivirus/VPN/firewall doing TLS inspection on port 27017 — disable it or allow outbound TCP 27017.';
+  }
+  if (/ENOTFOUND|EAI_AGAIN|querySrv|getaddrinfo/i.test(msg)) {
+    return 'DNS lookup for the Atlas host failed. Check your internet connection / DNS and try another network.';
+  }
+  if (/Server selection timed out|serverSelectionTimeout|ETIMEDOUT|ECONNREFUSED/i.test(msg)) {
+    return 'Could not reach Atlas in time. The cluster may be paused, or a firewall is blocking port 27017.';
+  }
+  return null;
 }
 
-module.exports = { connectDB, mongoose, MONGODB_OPTIONS };
+const connectDB = async () => {
+  if (mongoose.connection.readyState === 1 || isConnecting) {
+    return mongoose.connection;
+  }
+
+  const connUri = process.env.MONGODB_URI;
+  if (!connUri) {
+    console.error('[MongoDB] MONGODB_URI is not set. Add it to your .env file. Refusing to fall back to a hardcoded cluster/database.');
+    return null;
+  }
+
+  isConnecting = true;
+  try {
+    const conn = await mongoose.connect(connUri, {
+      serverSelectionTimeoutMS: 15000,
+      connectTimeoutMS: 15000,
+      socketTimeoutMS: 45000,
+    });
+    console.log(`[MongoDB] Connected successfully: ${conn.connection.host} (db: ${conn.connection.name})`);
+    if (reconnectTimer) {
+      clearInterval(reconnectTimer);
+      reconnectTimer = null;
+    }
+    return conn;
+  } catch (error) {
+    console.error(`[MongoDB] Connection FAILED: ${error.name}: ${error.message}`);
+    if (error.reason) {
+      console.error(`[MongoDB]   reason: ${error.reason.message || error.reason}`);
+    }
+    const hint = explainMongoError(error);
+    if (hint) {
+      console.error(`[MongoDB]   → ${hint}`);
+    }
+    console.warn('[MongoDB] The server will keep running and retry every 5s. Until then, database writes will fail.');
+    scheduleReconnect();
+    return null;
+  } finally {
+    isConnecting = false;
+  }
+};
+
+function scheduleReconnect() {
+  if (!reconnectTimer) {
+    reconnectTimer = setInterval(() => {
+      if (mongoose.connection.readyState === 0) {
+        console.log('[MongoDB] Attempting to reconnect...');
+        connectDB();
+      }
+    }, 5000);
+  }
+}
+
+mongoose.connection.on('disconnected', () => {
+  console.warn('[MongoDB] Connection lost. Attempting to reconnect...');
+  scheduleReconnect();
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error(`[MongoDB] Connection event error: ${err.message}`);
+});
+
+module.exports = connectDB;
+module.exports.connectDB = connectDB;

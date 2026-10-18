@@ -110,6 +110,38 @@
   .forgot-link { text-align: right; margin-top: 6px; }
   section { display: none; }
   section.active { display: block; }
+
+  /* ── Camera capture (steps 7-8) ── */
+  .cam {
+    width: 100%; display: none; margin-top: 12px;
+    border-radius: 8px; background: #000; aspect-ratio: 4 / 3; object-fit: cover;
+  }
+  .cam.on { display: block; }
+  /* Passport photo is captured inside a round frame */
+  .cam-round {
+    width: 240px; height: 240px; aspect-ratio: 1 / 1;
+    border-radius: 50%; border: 3px solid var(--brand); margin: 14px auto 0;
+  }
+  .preview-round {
+    width: 240px; height: 240px; border-radius: 50%; object-fit: cover;
+    border: 3px solid var(--brand); margin: 14px auto 0;
+  }
+  .cam-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; }
+  .cam-actions .primary, .cam-actions .link { width: auto; margin-top: 12px; }
+  .cam-timer { margin-top: 12px; text-align: center; font-size: .86rem; color: var(--muted); }
+
+  /* ── ID confirmation card ── */
+  .confirm-card {
+    margin-top: 16px; padding: 16px; border-radius: 8px;
+    border: 1.5px solid var(--brand); background: rgba(79, 209, 197, 0.08);
+  }
+  .confirm-card h3 { margin: 0 0 6px; font-size: 1.02rem; color: var(--navy); font-weight: 700; }
+  .confirm-card .hint { font-size: .82rem; color: var(--muted); margin: 0 0 8px; line-height: 1.45; }
+  .badge {
+    display: inline-block; font-size: .68rem; font-weight: 700; letter-spacing: .04em;
+    padding: 2px 8px; border-radius: 20px; background: var(--brand); color: #fff;
+    margin-left: 6px; vertical-align: middle; text-transform: uppercase;
+  }
 </style>
 
 <div class="wrap">
@@ -189,40 +221,102 @@
       {{!-- ── SECTION D: STEP 5 — VERIFY EMAIL CODE ── --}}
       <section id="emailCodeSection">
         <h2 style="font-size:1.15rem;margin:0 0 14px;color:var(--navy);font-weight:700;border-bottom:1.5px solid var(--line);padding-bottom:10px;">Account Activation: Email</h2>
-        <p class="note">Enter the 6-digit code sent to your email address.</p>
-        <input id="emailCode" class="code-input" inputmode="numeric" maxlength="6">
-        <p style="margin-top:10px;"><button type="button" class="link" id="resendEmailBtn">Resend code</button></p>
-        <button type="button" class="primary" id="emailCodeNextBtn">Next</button>
+        <p class="note" id="emailNote">Click "Request Code" to receive your 6-digit email activation code.</p>
+        
+        <button type="button" class="primary" id="requestEmailCodeBtn">Request Code</button>
+
+        <div id="emailInputWrap" style="display:none;margin-top:16px;">
+          <label for="emailCode">Verification Code</label>
+          <input id="emailCode" class="code-input" inputmode="numeric" maxlength="6" placeholder="------">
+          <p style="margin-top:10px;"><button type="button" class="link" id="resendEmailBtn">Resend code</button></p>
+          <button type="button" class="primary" id="emailCodeNextBtn" style="margin-top:16px;">Next</button>
+        </div>
       </section>
 
       {{!-- ── SECTION E: STEP 6 — VERIFY PHONE CODE ── --}}
       <section id="phoneCodeSection">
         <h2 style="font-size:1.15rem;margin:0 0 14px;color:var(--navy);font-weight:700;border-bottom:1.5px solid var(--line);padding-bottom:10px;">Account Activation: Phone</h2>
-        <p class="note">Enter the 6-digit code sent to your phone number by SMS.</p>
-        <input id="phoneCode" class="code-input" inputmode="numeric" maxlength="6">
-        <p style="margin-top:10px;"><button type="button" class="link" id="resendPhoneBtn">Resend code</button></p>
-        <button type="button" class="primary" id="phoneCodeNextBtn">Next</button>
+        <p class="note" id="phoneNote">Click "Request Code" to receive your 6-digit SMS verification code.</p>
+        
+        <button type="button" class="primary" id="requestPhoneCodeBtn">Request Code</button>
+
+        <div id="phoneInputWrap" style="display:none;margin-top:16px;">
+          <label for="phoneCode">Verification Code</label>
+          <input id="phoneCode" class="code-input" inputmode="numeric" maxlength="6" placeholder="------">
+          <p style="margin-top:10px;"><button type="button" class="link" id="resendPhoneBtn">Resend code</button></p>
+          <button type="button" class="primary" id="phoneCodeNextBtn" style="margin-top:16px;">Next</button>
+        </div>
       </section>
 
-      {{!-- ── SECTION F: STEP 7 — UPLOAD PASSPORT PHOTO ── --}}
+      {{!-- ── SECTION F: STEP 7 — TAKE PASSPORT PHOTO (liveness) ── --}}
       <section id="passportSection">
-        <h2 style="font-size:1.15rem;margin:0 0 14px;color:var(--navy);font-weight:700;border-bottom:1.5px solid var(--line);padding-bottom:10px;">Upload your Passport Photo</h2>
-        <input id="passportFile" type="file" accept="image/*">
-        <img id="passportPrev" class="preview" alt="Passport photo preview">
-        <button type="button" class="primary" id="passportNextBtn">Next</button>
+        <h2 style="font-size:1.15rem;margin:0 0 14px;color:var(--navy);font-weight:700;border-bottom:1.5px solid var(--line);padding-bottom:10px;">Take your Passport Photo</h2>
+        <p class="note" id="passportNote">Allow camera access and fit your face inside the round frame. Blink slowly to verify you are a real person.</p>
+
+        <video id="passportVideo" class="cam cam-round" playsinline muted></video>
+        <canvas id="passportCanvas" style="display:none;"></canvas>
+        <img id="passportPrev" class="preview preview-round" alt="Passport photo preview">
+
+        <div class="cam-actions">
+          <button type="button" class="primary" id="passportOpenBtn">Open Camera</button>
+          <button type="button" class="primary" id="passportShootBtn" style="display:none;" disabled>Take Photo</button>
+          <button type="button" class="link" id="passportRetakeBtn" style="display:none;">Retake</button>
+          <button type="button" class="link" id="passportPassBtn">Pass</button>
+        </div>
+
+        <div class="cam-timer" id="passportTimer"></div>
+
+        <button type="button" class="primary" id="passportNextBtn" style="display:none;">Next</button>
       </section>
 
-      {{!-- ── SECTION G: STEP 8 — UPLOAD NATIONAL ID ── --}}
+      {{!-- ── SECTION G: STEP 8 — SCAN NATIONAL ID + CONFIRM DETAILS ── --}}
       <section id="nationalIdSection">
-        <h2 style="font-size:1.15rem;margin:0 0 14px;color:var(--navy);font-weight:700;border-bottom:1.5px solid var(--line);padding-bottom:10px;">Upload your National ID</h2>
-        <input id="nationalIdFile" type="file" accept="image/*">
+        <h2 style="font-size:1.15rem;margin:0 0 14px;color:var(--navy);font-weight:700;border-bottom:1.5px solid var(--line);padding-bottom:10px;">Scan your National ID</h2>
+        <p class="note" id="nationalIdNote">Place the ID flat (landscape) inside the frame with even lighting, then capture. We will read the details for you to confirm.</p>
+
+        <video id="nationalIdVideo" class="cam" playsinline muted></video>
+        <canvas id="nationalIdCanvas" style="display:none;"></canvas>
         <img id="nationalIdPrev" class="preview" alt="National ID preview">
-        <button type="button" class="primary" id="nationalIdNextBtn">Finish &amp; Activate</button>
+
+        <div class="cam-actions">
+          <button type="button" class="primary" id="nationalIdOpenBtn">Open Camera</button>
+          <button type="button" class="primary" id="nationalIdShootBtn" style="display:none;" disabled>Capture ID</button>
+          <button type="button" class="link" id="nationalIdRetakeBtn" style="display:none;">Rescan</button>
+          <button type="button" class="link" id="nationalIdPassBtn">Pass</button>
+        </div>
+
+        <div class="cam-timer" id="nationalIdTimer"></div>
+
+        <div class="confirm-card" id="idConfirmCard" style="display:none;">
+          <h3>Confirm your ID details <span class="badge" id="idConfirmBadge">Review</span></h3>
+          <p class="hint" id="idConfirmHint">These details were read from your ID. Correct anything that is wrong, then confirm.</p>
+          <p class="hint" id="idSkipNote" style="display:none; color:var(--err); font-weight:600;">
+            No content uploaded — no ID photo or scan was captured for this step.
+          </p>
+
+          <div id="idFieldsWrap">
+            <label for="idFullName">Full Name</label>
+            <input id="idFullName" autocomplete="name" placeholder="As printed on the ID">
+
+            <label for="idNumber">ID Number</label>
+            <input id="idNumber" inputmode="numeric" maxlength="8" placeholder="7 or 8 digits">
+
+            <label for="idRegion">Region / County</label>
+            <input id="idRegion" placeholder="e.g. Nairobi">
+
+            <label for="idBlock">Block / Estate</label>
+            <input id="idBlock" placeholder="e.g. Block 4, Kasarani">
+          </div>
+
+          <button type="button" class="primary" id="nationalIdNextBtn">Confirm &amp; Finish</button>
+        </div>
       </section>
 
     </div>
   </div>
 </div>
+
+<script src="/js/capture.js"></script>
 
 <script>
 (function () {
@@ -288,11 +382,12 @@
     const pendingEmail = sessionStorage.getItem('pendingEmail');
     if (!pendingEmail) return; // normal login, nothing to do
 
-    // Pre-fill login email in case user needs it later
+    // Pre-fill login email from session by default
     $('loginEmail').value = pendingEmail;
+    if ($('loginPw')) $('loginPw').focus();
 
     try {
-      // Check users collection first, then pendingverifiedaccount
+      // Check users collection first
       const res = await fetch('/api/auth/check-account-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -300,36 +395,48 @@
       });
       const data = await res.json().catch(() => ({}));
 
-      if (data.status === 'pending') {
-        // Found in pendingverifiedaccount → restore token and show activation steps
-        token = sessionStorage.getItem('chama_token') || data.token || token;
-        if (token) sessionStorage.setItem('chama_token', token);
-        startActivation();
-      } else if (data.status === 'registered') {
-        // Found in users → already fully registered, go to dashboard
+      if (data.status === 'registered') {
+        // Already fully registered member → redirect to dashboard
         location.href = HOME_URL;
-      } else {
-        // Not found anywhere — show normal login
-        sessionStorage.removeItem('pendingEmail');
       }
-    } catch (e) {
-      sessionStorage.removeItem('pendingEmail');
-    }
+      // If status is 'pending', keep login form displayed so password must be entered
+    } catch (_) {}
   });
 
   function startActivation() {
     actStep = 0;
+    // Reset view state for email section: show Request Code button, hide input and Next button
+    $('requestEmailCodeBtn').style.display = 'block';
+    $('emailInputWrap').style.display = 'none';
+    $('emailCode').value = '';
+    $('emailNote').textContent = 'Click "Request Code" to receive your 6-digit email activation code.';
     showSection('emailCodeSection', 'Account Activation', 'Complete the remaining steps to activate your account');
     setBar(0);
-    // Auto-send email verification code via real middleware endpoint
-    api('/auth/send-code', { channel: 'email' })
-      .then(r => { if (r && r.demoCode) $('emailCode').value = r.demoCode; })
-      .catch(() => {});
   }
 
   // ═══════════════════════════════════════════════
   // STEP 5 — Email Code
   // ═══════════════════════════════════════════════
+  $('requestEmailCodeBtn').onclick = async function () {
+    this.disabled = true;
+    this.textContent = 'Sending code…';
+    hideBanner();
+    try {
+      await api('/auth/send-code', { channel: 'email' });
+      // On success: hide Request Code button, show input and Next button
+      $('requestEmailCodeBtn').style.display = 'none';
+      $('emailInputWrap').style.display = 'block';
+      $('emailNote').textContent = 'A 6-digit code has been dispatched. Enter it below to proceed.';
+      showBanner('Verification code sent! Check your inbox or terminal.', true);
+      $('emailCode').focus();
+    } catch (e) {
+      showBanner(e.message);
+    } finally {
+      this.disabled = false;
+      this.textContent = 'Request Code';
+    }
+  };
+
   $('emailCodeNextBtn').onclick = async function () {
     const code = $('emailCode').value.trim();
     if (!/^\d{6}$/.test(code)) return showBanner('Enter the 6-digit code.');
@@ -338,9 +445,13 @@
       // Real endpoint: /auth/verify-code (backed by authController.verifyCode + authenticate middleware)
       await api('/auth/verify-code', { channel: 'email', code });
       actStep = 1;
+      // Reset view state for phone section: show Request Code button, hide input and Next button
+      $('requestPhoneCodeBtn').style.display = 'block';
+      $('phoneInputWrap').style.display = 'none';
+      $('phoneCode').value = '';
+      $('phoneNote').textContent = 'Click "Request Code" to receive your 6-digit SMS verification code.';
       showSection('phoneCodeSection', 'Account Activation', 'Step 2 of 4 — Phone Verification');
       setBar(1);
-      // Note: verifyCode auto-sends SMS on email success per authController
     } catch (e) { showBanner(e.message); }
     finally { this.disabled = false; this.textContent = 'Next'; }
   };
@@ -349,6 +460,7 @@
     try {
       await api('/auth/resend-code', { channel: 'EMAIL' });
       this.textContent = 'Code sent';
+      showBanner('A fresh code has been dispatched.', true);
       setTimeout(() => this.textContent = 'Resend code', 4000);
     } catch (e) { showBanner(e.message); }
   };
@@ -356,6 +468,26 @@
   // ═══════════════════════════════════════════════
   // STEP 6 — Phone Code
   // ═══════════════════════════════════════════════
+  $('requestPhoneCodeBtn').onclick = async function () {
+    this.disabled = true;
+    this.textContent = 'Sending code…';
+    hideBanner();
+    try {
+      await api('/auth/send-code', { channel: 'phone' });
+      // On success: hide Request Code button, show input and Next button
+      $('requestPhoneCodeBtn').style.display = 'none';
+      $('phoneInputWrap').style.display = 'block';
+      $('phoneNote').textContent = 'A 6-digit code has been dispatched to your phone. Enter it below.';
+      showBanner('SMS verification code sent! Check your phone or terminal.', true);
+      $('phoneCode').focus();
+    } catch (e) {
+      showBanner(e.message);
+    } finally {
+      this.disabled = false;
+      this.textContent = 'Request Code';
+    }
+  };
+
   $('phoneCodeNextBtn').onclick = async function () {
     const code = $('phoneCode').value.trim();
     if (!/^\d{6}$/.test(code)) return showBanner('Enter the 6-digit code.');
@@ -374,28 +506,169 @@
     try {
       await api('/auth/resend-code', { channel: 'SMS' });
       this.textContent = 'Code sent';
+      showBanner('A fresh SMS code has been dispatched.', true);
       setTimeout(() => this.textContent = 'Resend code', 4000);
     } catch (e) { showBanner(e.message); }
   };
 
   // ═══════════════════════════════════════════════
-  // STEP 7 — Passport Photo
+  // Capture timer — unlocks manual capture after the time limit elapses
   // ═══════════════════════════════════════════════
-  $('passportFile').onchange = function (e) {
-    const f = e.target.files[0]; if (!f) return;
-    $('passportPrev').src = URL.createObjectURL(f);
+  function createCaptureTimer(opts) {
+    let remaining = 0, interval = null, unlocked = false;
+    const timerEl = opts.timerEl, shootBtn = opts.shootBtn;
+    function stopCountdown() { if (interval) { clearInterval(interval); interval = null; } }
+    function unlock(label) {
+      unlocked = true; stopCountdown();
+      shootBtn.disabled = false;
+      timerEl.textContent = label;
+    }
+    return {
+      start() {
+        remaining = opts.seconds; unlocked = false;
+        shootBtn.disabled = true;
+        stopCountdown();
+        timerEl.textContent = 'Live check running… capture unlocks in ' + remaining + 's';
+        interval = setInterval(() => {
+          remaining -= 1;
+          if (remaining <= 0) { unlock("Time's up — take the photo manually."); return; }
+          timerEl.textContent = 'Live check running… capture unlocks in ' + remaining + 's';
+        }, 1000);
+      },
+      onStatus(ready) { if (!unlocked && ready) unlock('Ready — take the photo.'); },
+      stop() { stopCountdown(); },
+      stopAndClear() { stopCountdown(); unlocked = false; timerEl.textContent = ''; shootBtn.disabled = true; }
+    };
+  }
+
+  // ═══════════════════════════════════════════════
+  // STEP 7 — Take Passport Photo (round frame + liveness)
+  // ═══════════════════════════════════════════════
+  const passportTimer = createCaptureTimer({
+    seconds: ChamaCapture.CONFIG.CAPTURE_TIME_LIMIT_S,
+    timerEl: $('passportTimer'),
+    shootBtn: $('passportShootBtn')
+  });
+  const passportSession = ChamaCapture.createSession({
+    mode: 'face',
+    video: $('passportVideo'),
+    canvas: $('passportCanvas'),
+    onStatus: state => passportTimer.onStatus(state.ready)
+  });
+  let passportShot = null;
+
+  function resetPassportView() {
+    passportShot = null;
+    passportSession.stop();
+    passportTimer.stopAndClear();
+    $('passportVideo').classList.remove('on');
+    $('passportPrev').style.display = 'none';
+    $('passportShootBtn').style.display = 'none';
+    $('passportShootBtn').textContent = 'Take Photo';
+    $('passportRetakeBtn').style.display = 'none';
+    $('passportNextBtn').style.display = 'none';
+    $('passportPassBtn').style.display = 'inline-block';
+    $('passportOpenBtn').style.display = 'block';
+    $('passportOpenBtn').disabled = false;
+    $('passportOpenBtn').textContent = 'Open Camera';
+    $('passportNote').textContent = 'Allow camera access and fit your face inside the round frame. Blink slowly to verify you are a real person.';
+  }
+
+  $('passportOpenBtn').onclick = async function () {
+    hideBanner();
+    this.disabled = true; this.textContent = 'Starting camera…';
+    try {
+      await passportSession.start();
+      $('passportVideo').classList.add('on');
+      $('passportPrev').style.display = 'none';
+      $('passportOpenBtn').style.display = 'none';
+      $('passportShootBtn').style.display = 'block';
+      $('passportRetakeBtn').style.display = 'block';
+      $('passportNextBtn').style.display = 'none';
+      passportTimer.start();
+    } catch (e) {
+      showBanner(e.message || 'Could not open the camera.');
+      this.disabled = false; this.textContent = 'Open Camera';
+    }
+  };
+
+  // "Pass" — skip the passport photo and continue to the next step.
+  $('passportPassBtn').onclick = function () {
+    resetPassportView();
+    hideBanner();
+    actStep = 3;
+    resetIdView();
+    showSection('nationalIdSection', 'Account Activation', 'Step 4 of 4 — National ID');
+    setBar(3);
+  };
+
+  $('passportShootBtn').onclick = async function () {
+    const shot = passportSession.capture();
+    if (!shot) return showBanner('Please open the camera first.');
+
+    let metrics = shot.metrics;
+    // Manual capture (timer elapsed or "Pass"): the live check did not pass, so
+    // re-measure the quality of the photo that is actually being submitted.
+    if (!shot.passed) {
+      try {
+        const extra = await ChamaCapture.analyzeStill(shot.dataUrl, 'face');
+        metrics = Object.assign({}, metrics, extra, { manual: true, blinkDetected: false, realPerson: false });
+      } catch (_) { metrics = Object.assign({}, metrics, { manual: true }); }
+    }
+
+    // Quality gates on the final photo.
+    if (metrics.brightness < ChamaCapture.CONFIG.MIN_BRIGHTNESS) {
+      return showBanner('The photo is too dark — move to better lighting and take it again.');
+    }
+    if (metrics.sharpness < ChamaCapture.CONFIG.MIN_SHARPNESS) {
+      return showBanner('The photo came out blurry — hold the camera steady and take it again.');
+    }
+    if (metrics.faceDetected === false) {
+      return showBanner('We could not see a face — fit your face inside the round frame and take it again.');
+    }
+
+    passportSession.stop();
+    passportTimer.stopAndClear();
+    passportShot = { dataUrl: shot.dataUrl, metrics: metrics };
+    $('passportVideo').classList.remove('on');
+    $('passportPrev').src = shot.dataUrl;
     $('passportPrev').style.display = 'block';
+    $('passportShootBtn').style.display = 'none';
+    $('passportRetakeBtn').style.display = 'block';
+    $('passportPassBtn').style.display = 'none';
+    $('passportOpenBtn').style.display = 'none';
+    $('passportNextBtn').style.display = 'block';
+    showBanner(metrics.manual
+      ? 'Photo captured and analysed. Continue if it looks good.'
+      : 'Photo captured and the live-person check passed.', true);
+  };
+
+  $('passportRetakeBtn').onclick = function () {
+    resetPassportView();
+    hideBanner();
+    $('passportOpenBtn').click();
   };
 
   $('passportNextBtn').onclick = async function () {
-    if (!$('passportFile').files[0]) return showBanner('Please choose a passport photo.');
+    if (!passportShot) return showBanner('Capture your passport photo first.');
     this.disabled = true; this.textContent = 'Uploading…';
     try {
+      const blob = await (await fetch(passportShot.dataUrl)).blob();
       const f = new FormData();
-      f.append('passportPhoto', $('passportFile').files[0]);
-      // Real endpoint: /kyc/passport-photo (backed by authenticate + multer + kycController)
+      f.append('passportPhoto', blob, 'passport.jpg');
+      f.append('liveness', JSON.stringify(passportShot.metrics));
+      f.append('face', JSON.stringify({
+        faceDetected: passportShot.metrics.faceDetected,
+        faceRatio: passportShot.metrics.faceRatio,
+        faceBox: passportShot.metrics.faceBox,
+        skinTone: passportShot.metrics.skinTone,
+        brightness: passportShot.metrics.brightness,
+        sharpness: passportShot.metrics.sharpness
+      }));
+      // Real endpoint: /kyc/passport-photo (authenticate + multer + kycController)
       await api('/kyc/passport-photo', f, true);
       actStep = 3;
+      resetIdView();
       showSection('nationalIdSection', 'Account Activation', 'Step 4 of 4 — National ID');
       setBar(3);
     } catch (e) { showBanner(e.message); }
@@ -403,22 +676,184 @@
   };
 
   // ═══════════════════════════════════════════════
-  // STEP 8 — National ID → Done → Dashboard
+  // STEP 8 — Scan National ID → OCR → Confirm → Dashboard
   // ═══════════════════════════════════════════════
-  $('nationalIdFile').onchange = function (e) {
-    const f = e.target.files[0]; if (!f) return;
-    $('nationalIdPrev').src = URL.createObjectURL(f);
+  const idTimer = createCaptureTimer({
+    seconds: ChamaCapture.CONFIG.CAPTURE_TIME_LIMIT_S,
+    timerEl: $('nationalIdTimer'),
+    shootBtn: $('nationalIdShootBtn')
+  });
+  const idSession = ChamaCapture.createSession({
+    mode: 'id',
+    video: $('nationalIdVideo'),
+    canvas: $('nationalIdCanvas'),
+    onStatus: state => idTimer.onStatus(state.ready)
+  });
+  let idShot = null;
+
+  function resetIdView() {
+    idShot = null;
+    idSession.stop();
+    idTimer.stopAndClear();
+    $('nationalIdVideo').classList.remove('on');
+    $('nationalIdPrev').style.display = 'none';
+    $('idConfirmCard').style.display = 'none';
+    $('idSkipNote').style.display = 'none';
+    $('idFieldsWrap').style.display = 'block';
+    $('idConfirmHint').style.display = 'block';
+    $('nationalIdNextBtn').textContent = 'Confirm & Finish';
+    $('nationalIdNextBtn').disabled = false;
+    $('nationalIdShootBtn').style.display = 'none';
+    $('nationalIdShootBtn').textContent = 'Capture ID';
+    $('nationalIdRetakeBtn').style.display = 'none';
+    $('nationalIdPassBtn').style.display = 'inline-block';
+    $('nationalIdOpenBtn').style.display = 'block';
+    $('nationalIdOpenBtn').disabled = false;
+    $('nationalIdOpenBtn').textContent = 'Open Camera';
+    $('nationalIdNote').textContent = 'Place the ID flat (landscape) inside the frame with even lighting, then capture. We will read the details for you to confirm.';
+  }
+
+  $('nationalIdOpenBtn').onclick = async function () {
+    hideBanner();
+    this.disabled = true; this.textContent = 'Starting camera…';
+    try {
+      await idSession.start();
+      $('nationalIdVideo').classList.add('on');
+      $('nationalIdPrev').style.display = 'none';
+      $('idConfirmCard').style.display = 'none';
+      $('nationalIdOpenBtn').style.display = 'none';
+      $('nationalIdShootBtn').style.display = 'block';
+      $('nationalIdRetakeBtn').style.display = 'block';
+      idTimer.start();
+    } catch (e) {
+      showBanner(e.message || 'Could not open the camera.');
+      this.disabled = false; this.textContent = 'Open Camera';
+    }
+  };
+
+  // "Pass" — no ID was captured. Show a confirmation card noting that nothing
+  // was uploaded, with an "Activate your account" button that migrates the
+  // already-verified data into the users collection.
+  $('nationalIdPassBtn').onclick = function () {
+    resetIdView();
+    hideBanner();
+    $('nationalIdNote').textContent = 'You chose to skip the ID scan.';
+    $('idConfirmHint').style.display = 'none';
+    $('idFieldsWrap').style.display = 'none';
+    $('idSkipNote').style.display = 'block';
+    $('nationalIdNextBtn').textContent = 'Activate your account';
+    $('idConfirmCard').style.display = 'block';
+    $('idConfirmCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  $('nationalIdShootBtn').onclick = async function () {
+    const shot = idSession.capture();
+    if (!shot) return showBanner('Please open the camera first.');
+
+    let metrics = shot.metrics;
+    // Manual capture (timer elapsed or "Pass"): re-measure the scan quality on
+    // the actual photo being submitted.
+    if (!shot.passed) {
+      try {
+        const extra = await ChamaCapture.analyzeStill(shot.dataUrl, 'id');
+        metrics = Object.assign({}, metrics, extra, { manual: true });
+      } catch (_) { metrics = Object.assign({}, metrics, { manual: true }); }
+    }
+
+    // Quality gates on the final photo.
+    if (metrics.brightness < ChamaCapture.CONFIG.MIN_BRIGHTNESS ||
+        metrics.brightness > ChamaCapture.CONFIG.MAX_BRIGHTNESS) {
+      return showBanner('The ID lighting is off — use even lighting without glare and scan again.');
+    }
+    if (metrics.sharpness < ChamaCapture.CONFIG.MIN_SHARPNESS) {
+      return showBanner('The ID photo is blurry — hold the camera steady and scan again.');
+    }
+    if (metrics.documentDetected === false) {
+      return showBanner('We could not see the ID clearly — fill the frame with the card and scan again.');
+    }
+    if (typeof metrics.edgeDensity === 'number' && metrics.edgeDensity < ChamaCapture.CONFIG.MIN_EDGE_DENSITY) {
+      return showBanner('We could not read the ID text — make sure the whole card is visible and scan again.');
+    }
+
+    idSession.stop();
+    idTimer.stopAndClear();
+    idShot = { dataUrl: shot.dataUrl, metrics: metrics };
+    $('nationalIdVideo').classList.remove('on');
+    $('nationalIdPrev').src = shot.dataUrl;
     $('nationalIdPrev').style.display = 'block';
+    $('nationalIdShootBtn').style.display = 'none';
+    $('nationalIdRetakeBtn').style.display = 'block';
+    $('nationalIdPassBtn').style.display = 'none';
+
+    // OCR — auto-fill the confirmation card (falls back to manual entry offline).
+    $('nationalIdNote').textContent = 'Reading your ID…';
+    let parsed = { fullName: '', idNumber: '', region: '', block: '' };
+    try {
+      const res = await ChamaCapture.runOCR(shot.dataUrl, (status, pct) => {
+        $('nationalIdNote').textContent = 'Reading your ID… ' + status + ' ' + pct + '%';
+      });
+      if (res && res.text) parsed = ChamaCapture.parseKenyanId(res.text);
+    } catch (_) { /* keep manual entry */ }
+
+    $('idFullName').value = parsed.fullName || $('idFullName').value || '';
+    $('idNumber').value = parsed.idNumber || '';
+    $('idRegion').value = parsed.region || '';
+    $('idBlock').value = parsed.block || '';
+    $('idConfirmHint').textContent = (parsed.idNumber || parsed.fullName)
+      ? 'We pre-filled the details we could read. Correct anything wrong, then confirm.'
+      : 'We could not read the ID automatically. Please type the details exactly as printed.';
+    $('nationalIdNote').textContent = 'Review the captured details below and confirm.';
+    $('idConfirmCard').style.display = 'block';
+    $('idConfirmCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  $('nationalIdRetakeBtn').onclick = function () {
+    resetIdView();
+    hideBanner();
+    $('nationalIdOpenBtn').click();
   };
 
   $('nationalIdNextBtn').onclick = async function () {
-    if (!$('nationalIdFile').files[0]) return showBanner('Please choose a photo of your National ID.');
-    this.disabled = true; this.textContent = 'Activating…';
+    // Pass mode — no ID was captured. Activate the account and migrate the
+    // already-verified data into the users collection.
+    if (!idShot) {
+      this.disabled = true; this.textContent = 'Activating your account…';
+      try {
+        await api('/kyc/activate-account', {});
+        sessionStorage.removeItem('pendingEmail');
+        sessionStorage.removeItem('chama_token');
+        location.href = HOME_URL;
+      } catch (e) {
+        showBanner(e.message);
+        this.disabled = false; this.textContent = 'Activate your account';
+      }
+      return;
+    }
+
+    const identity = {
+      fullName: $('idFullName').value.replace(/\s+/g, ' ').trim(),
+      idNumber: $('idNumber').value.replace(/\s/g, ''),
+      region: $('idRegion').value.trim(),
+      block: $('idBlock').value.trim()
+    };
+    if (identity.fullName.split(' ').filter(p => p.length > 1).length < 2) {
+      return showBanner('Enter your full name (at least two names).');
+    }
+    if (!/^\d{7,8}$/.test(identity.idNumber)) {
+      return showBanner('Enter a valid 7 or 8 digit ID number.');
+    }
+    if (identity.region.length < 2) return showBanner('Enter your region / county.');
+    if (identity.block.length < 2) return showBanner('Enter your block / estate.');
+
+    this.disabled = true; this.textContent = 'Submitting…';
     try {
+      const blob = await (await fetch(idShot.dataUrl)).blob();
       const f = new FormData();
-      f.append('idFront', $('nationalIdFile').files[0]);
-      f.append('idBack', $('nationalIdFile').files[0]);
-      // Real endpoint: /kyc/national-id (backed by authenticate + multer + kycController)
+      f.append('idFront', blob, 'national-id.jpg');
+      f.append('idBack', blob, 'national-id-back.jpg');
+      f.append('scan', JSON.stringify(idShot.metrics));
+      f.append('identity', JSON.stringify(identity));
+      // Real endpoint: /kyc/national-id (authenticate + multer + kycController)
       await api('/kyc/national-id', f, true);
       // Clear pending state and go to dashboard
       sessionStorage.removeItem('pendingEmail');
@@ -426,7 +861,7 @@
       location.href = HOME_URL;
     } catch (e) {
       showBanner(e.message);
-      this.disabled = false; this.textContent = 'Finish & Activate';
+      this.disabled = false; this.textContent = 'Confirm & Finish';
     }
   };
 
@@ -503,13 +938,49 @@
   // ═══════════════════════════════════════════════
   // NORMAL LOGIN SUBMIT
   // ═══════════════════════════════════════════════
-  $('loginForm').onsubmit = function (e) {
+  $('loginForm').onsubmit = async function (e) {
+    e.preventDefault();
+    hideBanner();
     const email = $('loginEmail').value.trim();
     const pw = $('loginPw').value;
-    if (!emailRx.test(email)) { e.preventDefault(); return showBanner('Enter a valid email address.'); }
-    if (!pw) { e.preventDefault(); return showBanner('Enter your password.'); }
+    if (!emailRx.test(email)) return showBanner('Enter a valid email address.');
+    if (!pw) return showBanner('Enter your password.');
+
     $('loginBtn').disabled = true;
     $('loginBtn').textContent = 'Signing in…';
+
+    try {
+      const res = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pw })
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.message || data.error || 'Invalid credentials.');
+      }
+
+      if (data.token) {
+        token = data.token;
+        sessionStorage.setItem('chama_token', token);
+      }
+      sessionStorage.setItem('pendingEmail', email);
+
+      if (data.status === 'ACTIVE' || (data.user && data.user.status === 'ACTIVE')) {
+        sessionStorage.removeItem('pendingEmail');
+        location.href = HOME_URL;
+      } else {
+        // Pending verification in pendingverifiedaccount:
+        // Now proceed to Step 5 (Email OTP Verification)
+        startActivation();
+      }
+    } catch (err) {
+      showBanner(err.message);
+    } finally {
+      $('loginBtn').disabled = false;
+      $('loginBtn').textContent = 'Log In';
+    }
   };
 
   ['loginEmail', 'loginPw'].forEach(id => {

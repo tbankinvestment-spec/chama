@@ -7,6 +7,10 @@ const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
 const Register = require("../models/register");
 const User = Register;
+const { registerBlock, loginBlock } = require("../middlewares/trafficLimiter");
+const { normalizeKenyanPhone } = require("../utils/phoneNormalizer");
+
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 // In-memory fallback cache for pending registrations and users
 const inMemoryUsers = new Map();
@@ -29,16 +33,69 @@ async function ensurePendingCollection() {
 }
 
 // 1. Step 4: POST /api/auth/register
-router.post("/api/auth/register", async (req, res) => {
+router.post("/api/auth/register", registerBlock, async (req, res) => {
   try {
     const { fullName, dob, gender, phone, email, location, contacts, password } = req.body;
 
-    if (!fullName || !email || !password) {
-      return res.status(400).json({ error: "Full name, email, and password are required." });
+    if (!fullName || !email || !password || !phone) {
+      return res.status(400).json({ error: "Full name, email, phone, and password are required." });
     }
 
     const cleanEmail = String(email).trim().toLowerCase();
-    const cleanPhone = String(phone || "").trim();
+    if (!EMAIL_REGEX.test(cleanEmail)) {
+      return res.status(400).json({ error: "Invalid email address format." });
+    }
+
+    const cleanPhone = normalizeKenyanPhone(phone);
+    if (!cleanPhone) {
+      return res.status(400).json({ error: "Invalid Kenyan phone number format. Use 07XXXXXXXX, 01XXXXXXXX, or +254..." });
+    }
+
+    // Validate Contacts if provided
+    let normalizedContacts = [];
+    if (Array.isArray(contacts) && contacts.length > 0) {
+      if (contacts.length !== 2) {
+        return res.status(400).json({ error: "Exactly two close persons of contact are required." });
+      }
+
+      for (let i = 0; i < contacts.length; i++) {
+        const c = contacts[i];
+        if (!c.name || !c.gender || !c.relationship) {
+          return res.status(400).json({ error: `Contact #${i + 1}: complete name, gender, and relationship.` });
+        }
+        const cPhone = normalizeKenyanPhone(c.phone);
+        if (!cPhone) {
+          return res.status(400).json({ error: `Contact #${i + 1} has an invalid Kenyan phone number format.` });
+        }
+        if (cPhone === cleanPhone) {
+          return res.status(400).json({ error: `Contact #${i + 1} phone number cannot match your personal phone number.` });
+        }
+
+        const cEmail = String(c.email || "").trim().toLowerCase();
+        if (!cEmail || !EMAIL_REGEX.test(cEmail)) {
+          return res.status(400).json({ error: `Contact #${i + 1} has an invalid email address format.` });
+        }
+        if (cEmail === cleanEmail) {
+          return res.status(400).json({ error: `Contact #${i + 1} email address cannot match your personal email address.` });
+        }
+
+        normalizedContacts.push({
+          name: String(c.name).trim(),
+          gender: String(c.gender).trim().toLowerCase(),
+          relationship: String(c.relationship).trim(),
+          phone: cPhone,
+          email: cEmail,
+        });
+      }
+
+      if (normalizedContacts[0].phone === normalizedContacts[1].phone) {
+        return res.status(400).json({ error: "The two contacts cannot share the same phone number." });
+      }
+      if (normalizedContacts[0].email === normalizedContacts[1].email) {
+        return res.status(400).json({ error: "The two contacts cannot share the same email address." });
+      }
+    }
+
     const passwordHash = await bcrypt.hash(String(password), 10);
 
     // Confirm collection is available before saving, create if not present
@@ -49,11 +106,11 @@ router.post("/api/auth/register", async (req, res) => {
       _id: "user-" + Date.now(),
       name: fullName,
       email: cleanEmail,
-      phone: cleanPhone || "+254700000000",
+      phone: cleanPhone,
       dob,
       gender,
       location,
-      contacts,
+      contacts: normalizedContacts.length > 0 ? normalizedContacts : contacts,
       passwordHash,
       memberIndex: null, // memberIndex value should not be updated yet
       emailVerified: false,
@@ -126,7 +183,7 @@ router.post("/api/auth/register", async (req, res) => {
 });
 
 // 2. Step 5: POST /api/auth/login
-router.post("/api/auth/login", async (req, res) => {
+router.post("/api/auth/login", loginBlock, async (req, res) => {
   try {
     const { email, password } = req.body;
     const cleanEmail = String(email || "").trim().toLowerCase();

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Create your Chama account</title>
+<style>
+  :root { --bg:#f8fafc; --card:#fff; --text:#0f172a; --muted:#64748b; --brand:#059669; --err:#dc2626; --line:#e2e8f0; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f172a; --card:#1e293b; --text:#f8fafc; --muted:#94a3b8; --brand:#10b981; --err:#f87171; --line:#334155; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--text); }
+  .wrap { max-width:560px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:1.4rem; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 20px; font-size:.9rem; }
+  .bar { height:6px; background:var(--line); border-radius:3px; overflow:hidden; margin-bottom:6px; }
+  .bar > i { display:block; height:100%; width:0; background:var(--brand); transition:width .25s; }
+  .count { font-size:.8rem; color:var(--muted); margin-bottom:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; }
+  .step { display:none; } .step.active { display:block; }
+  .step h2 { font-size:1.1rem; margin:0 0 14px; }
+  h3 { font-size:.95rem; margin:18px 0 8px; color:var(--brand); }
+  label { display:block; font-size:.85rem; margin:12px 0 4px; }
+  input, select { width:100%; padding:10px 12px; font-size:1rem; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--text); }
+  input:focus, select:focus { outline:2px solid var(--brand); border-color:transparent; }
+  input[readonly] { opacity:.7; }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:480px) { .row { grid-template-columns:1fr; } }
+  .err { color:var(--err); font-size:.8rem; min-height:1em; margin-top:3px; }
+  .banner { display:none; background:rgba(220,38,38,.12); color:var(--err); padding:10px 12px; border-radius:8px; margin-top:14px; font-size:.9rem; }
+  .actions { display:flex; gap:10px; margin-top:20px; }
+  button { font:inherit; padding:11px 18px; border-radius:8px; border:0; cursor:pointer; }
+  .primary { background:var(--brand); color:#fff; flex:1; font-weight:600; }
+  .ghost { background:transparent; border:1px solid var(--line); color:var(--text); }
+  .link { background:none; color:var(--brand); padding:0; text-decoration:underline; }
+  button:disabled { opacity:.6; cursor:wait; }
+  .code { letter-spacing:.5em; text-align:center; font-size:1.4rem; }
+  .preview { margin-top:12px; max-width:100%; max-height:240px; border-radius:8px; display:none; }
+  .note { font-size:.85rem; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Create your Chama account</h1>
+
+  <div class="card">
+    <!-- 1. Personal information -->
+    <section class="step active" data-step="personal">
+      <h2>Personal Information</h2>
+      <label for="fullName">Full Name</label><input id="fullName" autocomplete="name">
+      <div class="row">
+        <div><label for="dob">Date of Birth</label><input id="dob" type="date"></div>
+        <div><label for="gender">Gender</label>
+          <select id="gender"><option value="">Select…</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+      </div>
+      <div class="row">
+        <div><label for="phone">Phone Number</label><input id="phone" type="tel" placeholder="0712345678" autocomplete="tel"></div>
+        <div><label for="phone2">Confirm Phone Number</label><input id="phone2" type="tel"></div>
+      </div>
+      <div class="row">
+        <div><label for="email">Email Address</label><input id="email" type="email" autocomplete="email"></div>
+        <div><label for="email2">Confirm Email Address</label><input id="email2" type="email"></div>
+      </div>
+    </section>
+
+    <!-- 2. Location -->
+    <section class="step" data-step="location">
+      <h2>Your Location</h2>
+      <div class="row">
+        <div><label for="county">County</label><input id="county"></div>
+        <div><label for="subCounty">Sub County</label><input id="subCounty"></div>
+      </div>
+      <div class="row">
+        <div><label for="town">Town</label><input id="town"></div>
+        <div><label for="street">Road/Street</label><input id="street"></div>
+      </div>
+    </section>
+
+    <!-- 3. Close persons of contact -->
+    <section class="step" data-step="contacts">
+      <h2>Close Persons of Contact</h2>
+      <div id="contacts"></div>
+    </section>
+
+    <!-- 4. Create password -->
+    <section class="step" data-step="password">
+      <h2>Create Your Login</h2>
+      <label for="username">UserName (Email)</label><input id="username" readonly>
+      <label for="pw">Create Password</label><input id="pw" type="password" autocomplete="new-password">
+      <label for="pw2">Confirm Password</label><input id="pw2" type="password" autocomplete="new-password">
+      <p class="note">At least 8 characters, with a letter and a number.</p>
+    </section>
+
+    <!-- 5. Login -->
+    <section class="step" data-step="login">
+      <h2>Personal Account Login</h2>
+      <label for="loginEmail">Email Address</label><input id="loginEmail" type="email" autocomplete="username">
+      <label for="loginPw">Enter Password</label><input id="loginPw" type="password" autocomplete="current-password">
+    </section>
+
+    <!-- 6. Email activation -->
+    <section class="step" data-step="emailCode">
+      <h2>Account Activation: Email</h2>
+      <p class="note">Enter the 6-digit code sent to your email address.</p>
+      <input id="emailCode" class="code" inputmode="numeric" maxlength="6">
+      <p><button type="button" class="link" data-resend="email">Resend code</button></p>
+    </section>
+
+    <!-- 7. Phone activation -->
+    <section class="step" data-step="phoneCode">
+      <h2>Account Activation: Phone</h2>
+      <p class="note">Enter the 6-digit code sent to your phone number by SMS.</p>
+      <input id="phoneCode" class="code" inputmode="numeric" maxlength="6">
+      <p><button type="button" class="link" data-resend="phone">Resend code</button></p>
+    </section>
+
+    <!-- 8. Passport photo -->
+    <section class="step" data-step="passport">
+      <h2>Upload your Passport Photo</h2>
+      <input id="passport" type="file" accept="image/*">
+      <img id="passportPrev" class="preview" alt="Passport photo preview">
+    </section>
+
+    <!-- 9. National ID -->
+    <section class="step" data-step="nationalId">
+      <h2>Upload your National ID</h2>
+      <input id="nationalId" type="file" accept="image/*">
+      <img id="nationalIdPrev" class="preview" alt="National ID preview">
+    </section>
+
+    <div class="banner" id="banner" role="alert"></div>
+    <div class="actions">
+      <button type="button" class="ghost" id="back">Back</button>
+      <button type="button" class="primary" id="next">Go to the Next Page</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const STEPS = ['personal','location','contacts','password','login','emailCode','phoneCode','passport','nationalId'];
+const HOME_URL = '/home';
+const phoneRx = /^(?:\+254|0)[17]\d{8}$/;
+const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+let cur = 0, token = sessionStorage.getItem('chama_token') || '';
+
+// Build the two contact-person blocks
+const fields = [['Full Name','name','text'],['Gender','gender','select'],['Relationship','relationship','text'],
+  ['Phone Number','phone','tel'],['Confirm Phone Number','phone2','tel'],['Email Address','email','email'],['Confirm Email Address','email2','email']];
+$('contacts').innerHTML = ['One','Two'].map((n,i) => `<h3>Person ${n}</h3><div class="row">` + fields.map(([l,k,t]) =>
+  `<div><label for="c${i}_${k}">${l}</label>` + (t==='select'
+    ? `<select id="c${i}_${k}"><option value="">Select…</option><option>Male</option><option>Female</option><option>Other</option></select>`
+    : `<input id="c${i}_${k}" type="${t}">`) + `</div>`).join('') + `</div>`).join('');
+
+const v = id => $(id).value.trim();
+const normPhone = p => p.replace(/^0/, '+254');
+
+// ---------- validation (returns error message or '') ----------
+const validators = {
+  personal() {
+    if (!v('fullName')) return 'Enter your full name.';
+    if (!v('dob')) return 'Enter your date of birth.';
+    const age = (Date.now() - new Date(v('dob'))) / 31557600000;
+    if (age < 18) return 'You must be at least 18 years old.';
+    if (!v('gender')) return 'Select your gender.';
+    if (!phoneRx.test(v('phone'))) return 'Enter a valid Kenyan phone number.';
+    if (v('phone') !== v('phone2')) return 'Phone numbers do not match.';
+    if (!emailRx.test(v('email'))) return 'Enter a valid email address.';
+    if (v('email').toLowerCase() !== v('email2').toLowerCase()) return 'Email addresses do not match.';
+    return '';
+  },
+  location() {
+    return ['county','subCounty','town','street'].every(k => v(k)) ? '' : 'Fill in all location fields.';
+  },
+  contacts() {
+    const ownerPhone = normPhone(v('phone'));
+    const ownerEmail = v('email').toLowerCase();
+
+    for (let i = 0; i < 2; i++) {
+      const g = k => v(`c${i}_${k}`), who = `Person ${i ? 'Two' : 'One'}`;
+      if (!g('name') || !g('gender') || !g('relationship')) return `${who}: complete name, gender and relationship.`;
+      if (!phoneRx.test(g('phone'))) return `${who}: enter a valid phone number.`;
+      if (g('phone') !== g('phone2')) return `${who}: phone numbers do not match.`;
+      if (!emailRx.test(g('email'))) return `${who}: enter a valid email.`;
+      if (g('email').toLowerCase() !== g('email2').toLowerCase()) return `${who}: email addresses do not match.`;
+
+      if (normPhone(g('phone')) === ownerPhone) {
+        return `${who} cannot have the same phone number as the account owner.`;
+      }
+      if (g('email').toLowerCase() === ownerEmail) {
+        return `${who} cannot have the same email address as the account owner.`;
+      }
+    }
+
+    if (normPhone(v('c0_phone')) === normPhone(v('c1_phone'))) {
+      return 'Person One and Person Two cannot have matching phone numbers.';
+    }
+
+    if (v('c0_email').toLowerCase() === v('c1_email').toLowerCase()) {
+      return 'Person One and Person Two cannot have matching email addresses.';
+    }
+
+    return '';
+  },
+  password() {
+    if (!v('dob')) return 'Date of birth is required.';
+    const birthDate = new Date(v('dob'));
+    if (isNaN(birthDate.getTime())) return 'Please enter a valid date of birth.';
+    if (birthDate > new Date()) return 'Date of birth cannot be in the future.';
+    const age = (Date.now() - birthDate.getTime()) / 31557600000;
+    if (age < 18) return 'You must be at least 18 years old to register.';
+
+    if (v('pw').length < 8 || !/[A-Za-z]/.test(v('pw')) || !/\d/.test(v('pw'))) return 'Password needs 8+ characters with a letter and a number.';
+    return v('pw') === v('pw2') ? '' : 'Passwords do not match.';
+  },
+  login() { return emailRx.test(v('loginEmail')) && $('loginPw').value ? '' : 'Enter your email and password.'; },
+  emailCode() { return /^\d{6}$/.test(v('emailCode')) ? '' : 'Enter the 6-digit code.'; },
+  phoneCode() { return /^\d{6}$/.test(v('phoneCode')) ? '' : 'Enter the 6-digit code.'; },
+  passport() { return $('passport').files[0] ? '' : 'Choose a passport photo.'; },
+  nationalId() { return $('nationalId').files[0] ? '' : 'Choose a photo of your National ID.'; }
+};
+
+// ---------- API ----------
+async function api(path, body, isForm) {
+  const headers = token ? { Authorization: 'Bearer ' + token } : {};
+  if (!isForm) headers['Content-Type'] = 'application/json';
+  const res = await fetch('/api/auth' + path, { method: 'POST', headers, body: isForm ? body : JSON.stringify(body || {}) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || data.error || 'Something went wrong. Try again.');
+  return data;
+}
+
+// What happens when "Go to the Next Page" is pressed on each step
+const submitters = {
+  async password() {
+    await api('/register', {
+      fullName: v('fullName'), dob: v('dob'), gender: v('gender'),
+      phone: normPhone(v('phone')), email: v('email').toLowerCase(),
+      location: { county: v('county'), subCounty: v('subCounty'), town: v('town'), street: v('street') },
+      contacts: [0,1].map(i => ({ name: v(`c${i}_name`), gender: v(`c${i}_gender`), relationship: v(`c${i}_relationship`),
+        phone: normPhone(v(`c${i}_phone`)), email: v(`c${i}_email`).toLowerCase() })),
+      password: $('pw').value
+    });
+    $('loginEmail').value = v('email');
+  },
+  async login() {
+    const d = await api('/login', { email: v('loginEmail'), password: $('loginPw').value });
+    token = d.token; sessionStorage.setItem('chama_token', token);
+    await api('/send-code', { channel: 'email' }).catch(() => api('/resend-code', { channel: 'email' }));
+  },
+  async emailCode() {
+    await api('/verify-code', { channel: 'email', code: v('emailCode') })
+      .catch(() => api('/verify-email', { code: v('emailCode') }));
+    await api('/send-code', { channel: 'phone' }).catch(() => {});
+  },
+  async phoneCode() {
+    await api('/verify-code', { channel: 'phone', code: v('phoneCode') })
+      .catch(() => api('/verify-phone', { code: v('phoneCode') }));
+  },
+  async passport() {
+    const f = new FormData();
+    f.append('passportPhoto', $('passport').files[0]);
+    f.append('file', $('passport').files[0]);
+    await api('/upload/passport', f, true)
+      .catch(() => fetch('/api/kyc/passport-photo', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: f
+      }).then(r => r.json()));
+  },
+  async nationalId() {
+    const f = new FormData();
+    f.append('idFront', $('nationalId').files[0]);
+    f.append('file', $('nationalId').files[0]);
+    await api('/upload/national-id', f, true)
+      .catch(() => fetch('/api/kyc/national-id', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: f
+      }).then(r => r.json()));
+    sessionStorage.removeItem('chama_token'); location.href = HOME_URL;   // final step: land on Home Page
+  }
+};
+
+// ---------- navigation ----------
+function show(i) {
+  cur = i;
+  document.querySelectorAll('.step').forEach(s => s.classList.toggle('active', s.dataset.step === STEPS[i]));
+  $('banner').style.display = 'none';
+  // Once the account exists, going back before login would re-register: block it
+  $('back').style.visibility = (i === 0 || i >= STEPS.indexOf('login')) ? 'hidden' : 'visible';
+  $('next').textContent = i === STEPS.length - 1 ? 'Finish' : 'Go to the Next Page';
+  if (STEPS[i] === 'password') $('username').value = v('email');
+}
+function fail(msg) { const b = $('banner'); b.textContent = msg; b.style.display = 'block'; }
+
+$('next').onclick = async () => {
+  const name = STEPS[cur], err = validators[name]();
+  if (err) return fail(err);
+  $('next').disabled = true;
+  try { if (submitters[name]) await submitters[name](); show(cur + 1); }
+  catch (e) { fail(e.message); }
+  finally { $('next').disabled = false; }
+};
+$('back').onclick = () => cur > 0 && show(cur - 1);
+
+document.querySelectorAll('[data-resend]').forEach(b => b.onclick = async () => {
+  try {
+    const ch = b.dataset.resend;
+    await api('/send-code', { channel: ch }).catch(() => api('/resend-code', { channel: ch }));
+    b.textContent = 'Code sent';
+    setTimeout(() => b.textContent = 'Resend code', 4000);
+  }
+  catch (e) { fail(e.message); }
+});
+
+// Image previews
+[['passport','passportPrev'],['nationalId','nationalIdPrev']].forEach(([inp, img]) => $(inp).onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  $(img).src = URL.createObjectURL(f); $(img).style.display = 'block';
+});
+
+show(0);
+</script>
+</body>
+</html>

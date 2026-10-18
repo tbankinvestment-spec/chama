@@ -24,3 +24,11 @@ Thumbs.db
 # Build artifacts
 dist/
 build/
+
+# Temporary logs & text files
+*.txt
+!README*.txt
+
+# User uploads / KYC files
+public/uploads/*
+!public/uploads/.gitkeep
