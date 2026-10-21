@@ -1,3 +1,6 @@
+const dns = require('dns');
+try { dns.setServers(['8.8.8.8', '1.1.1.1']); } catch (_) {}
+require('dotenv').config();
 // tests/testLoginInjection.js
 // Comprehensive Security Test Suite for Chama Application
 // Covers:
@@ -15,11 +18,13 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const { createApp } = require('../config/app');
 const authRoutes = require('../routes/authRoutes');
+const connectDB = require('../config/db');
 
 const app = createApp();
 app.use('/auth', authRoutes);
 
 async function runTests() {
+  await connectDB();
   console.log('================================================================');
   console.log('Chama Application Security & Vulnerability Defense Test Suite');
   console.log('================================================================\n');
@@ -148,15 +153,15 @@ async function runTests() {
       // Attempt to register with injected privilege escalation attributes
       const maliciousPayload = {
         fullName: "John Doe",
-        email: "johndoe_security_test@example.com",
-        phone: "0712345678",
+        email: `johndoe_${Date.now()}@example.com`,
+        phone: `07${Math.floor(10000000 + Math.random() * 90000000)}`,
         dob: "1995-05-15",
         gender: "Male",
-        location: { county: "Nairobi", subCounty: "Westlands", town: "Parklands", street: "Mpaka" },
-        contacts: [
-          { name: "Person One", gender: "Female", relationship: "Sister", phone: "0722111222", email: "p1@example.com" },
-          { name: "Person Two", gender: "Male", relationship: "Brother", phone: "0733111222", email: "p2@example.com" }
-        ],
+        LocationCounty: "Nairobi",
+        locationSubCuonty: "Westlands",
+        locationvilage: "Parklands",
+        personOneName: "Person One", personOneGender: "Female", personOneRelationship: "Sister", personOnePhone: "0722111222", personOneEmail: "p1@example.com",
+        personTwoName: "Person Two", personTwoGender: "Male", personTwoRelationship: "Brother", personTwoPhone: "0733111222", personTwoEmail: "p2@example.com",
         password: "Password123!",
         // INJECTED FORBIDDEN FIELDS:
         role: "admin",
@@ -204,11 +209,11 @@ async function runTests() {
         phone: "0712999888",
         dob: "1998-08-20",
         gender: "Female",
-        location: { county: "Nairobi", subCounty: "Kilimani", town: "Kilimani", street: "Argwings" },
-        contacts: [
-          { name: "Contact A", gender: "Female", relationship: "Mother", phone: "0722333444", email: "ca@example.com" },
-          { name: "Contact B", gender: "Male", relationship: "Father", phone: "0733444555", email: "cb@example.com" }
-        ],
+        LocationCounty: "Nairobi",
+        locationSubCuonty: "Kilimani",
+        locationvilage: "Kilimani",
+        personOneName: "Contact A", personOneGender: "Female", personOneRelationship: "Mother", personOnePhone: "0722333444", personOneEmail: "ca@example.com",
+        personTwoName: "Contact B", personTwoGender: "Male", personTwoRelationship: "Father", personTwoPhone: "0733444555", personTwoEmail: "cb@example.com",
         password: "SecurePassword123!",
       }, { 'X-Forwarded-For': '10.0.0.2' });
 

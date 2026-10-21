@@ -35,7 +35,40 @@ async function ensurePendingCollection() {
 // 1. Step 4: POST /api/auth/register
 router.post("/api/auth/register", registerBlock, async (req, res) => {
   try {
-    const { fullName, dob, gender, phone, email, location, contacts, password } = req.body;
+    const {
+      fullName,
+      name,
+      dob,
+      dateOfBirth,
+      dateofBirth,
+      gender,
+      phone,
+      email,
+      LocationCounty,
+      locationCounty,
+      locationSubCuonty,
+      locationSubCounty,
+      locationvilage,
+      locationVillage,
+      location,
+      personOneName,
+      personOneGender,
+      personOneRelationship,
+      personOnePhone,
+      personOneEmail,
+      personTwoName,
+      personTwoGender,
+      personTwoRelationship,
+      personTwoPhone,
+      personTwoEmail,
+      password,
+    } = req.body;
+
+    const resolvedCounty = String(LocationCounty || locationCounty || (location && location.county) || '').trim();
+    const resolvedSubCounty = String(locationSubCuonty || locationSubCounty || (location && location.subCounty) || '').trim();
+    const resolvedVillage = String(locationvilage || locationVillage || (location && (location.town || location.village)) || '').trim();
+    const rawDob = String(dateOfBirth || dob || req.body.dateofBirth || '').trim();
+    const displayName = String(fullName || name || '').trim();
 
     if (!fullName || !email || !password || !phone) {
       return res.status(400).json({ error: "Full name, email, phone, and password are required." });
@@ -51,50 +84,23 @@ router.post("/api/auth/register", registerBlock, async (req, res) => {
       return res.status(400).json({ error: "Invalid Kenyan phone number format. Use 07XXXXXXXX, 01XXXXXXXX, or +254..." });
     }
 
-    // Validate Contacts if provided
-    let normalizedContacts = [];
-    if (Array.isArray(contacts) && contacts.length > 0) {
-      if (contacts.length !== 2) {
-        return res.status(400).json({ error: "Exactly two close persons of contact are required." });
-      }
-
-      for (let i = 0; i < contacts.length; i++) {
-        const c = contacts[i];
-        if (!c.name || !c.gender || !c.relationship) {
-          return res.status(400).json({ error: `Contact #${i + 1}: complete name, gender, and relationship.` });
-        }
-        const cPhone = normalizeKenyanPhone(c.phone);
-        if (!cPhone) {
-          return res.status(400).json({ error: `Contact #${i + 1} has an invalid Kenyan phone number format.` });
-        }
-        if (cPhone === cleanPhone) {
-          return res.status(400).json({ error: `Contact #${i + 1} phone number cannot match your personal phone number.` });
-        }
-
-        const cEmail = String(c.email || "").trim().toLowerCase();
-        if (!cEmail || !EMAIL_REGEX.test(cEmail)) {
-          return res.status(400).json({ error: `Contact #${i + 1} has an invalid email address format.` });
-        }
-        if (cEmail === cleanEmail) {
-          return res.status(400).json({ error: `Contact #${i + 1} email address cannot match your personal email address.` });
-        }
-
-        normalizedContacts.push({
-          name: String(c.name).trim(),
-          gender: String(c.gender).trim().toLowerCase(),
-          relationship: String(c.relationship).trim(),
-          phone: cPhone,
-          email: cEmail,
-        });
-      }
-
-      if (normalizedContacts[0].phone === normalizedContacts[1].phone) {
-        return res.status(400).json({ error: "The two contacts cannot share the same phone number." });
-      }
-      if (normalizedContacts[0].email === normalizedContacts[1].email) {
-        return res.status(400).json({ error: "The two contacts cannot share the same email address." });
-      }
-    }
+    // Validate Person One and Person Two
+    const p1Phone = normalizeKenyanPhone(personOnePhone);
+    const p2Phone = normalizeKenyanPhone(personTwoPhone);
+    if (!personOneName || !personOneGender || !personOneRelationship) return res.status(400).json({ error: "Person One: name, gender and relationship are required." });
+    if (!personTwoName || !personTwoGender || !personTwoRelationship) return res.status(400).json({ error: "Person Two: name, gender and relationship are required." });
+    if (!p1Phone) return res.status(400).json({ error: "Person One has an invalid Kenyan phone number." });
+    if (p1Phone === cleanPhone) return res.status(400).json({ error: "Person One phone cannot match your phone number." });
+    if (!p2Phone) return res.status(400).json({ error: "Person Two has an invalid Kenyan phone number." });
+    if (p2Phone === cleanPhone) return res.status(400).json({ error: "Person Two phone cannot match your phone number." });
+    if (p1Phone === p2Phone) return res.status(400).json({ error: "Person One and Person Two cannot share the same phone number." });
+    const p1Email = String(personOneEmail || "").trim().toLowerCase();
+    const p2Email = String(personTwoEmail || "").trim().toLowerCase();
+    if (!p1Email || !EMAIL_REGEX.test(p1Email)) return res.status(400).json({ error: "Person One has an invalid email address." });
+    if (p1Email === cleanEmail) return res.status(400).json({ error: "Person One email cannot match your email address." });
+    if (!p2Email || !EMAIL_REGEX.test(p2Email)) return res.status(400).json({ error: "Person Two has an invalid email address." });
+    if (p2Email === cleanEmail) return res.status(400).json({ error: "Person Two email cannot match your email address." });
+    if (p1Email === p2Email) return res.status(400).json({ error: "Person One and Person Two cannot share the same email address." });
 
     const passwordHash = await bcrypt.hash(String(password), 10);
 
@@ -103,14 +109,16 @@ router.post("/api/auth/register", registerBlock, async (req, res) => {
 
     // memberIndex is NOT assigned/updated yet at this stage
     let userDoc = {
-      _id: "user-" + Date.now(),
-      name: fullName,
-      email: cleanEmail,
       phone: cleanPhone,
-      dob,
+      email: cleanEmail,
+      name: displayName,
+      dateOfBirth: rawDob,
       gender,
-      location,
-      contacts: normalizedContacts.length > 0 ? normalizedContacts : contacts,
+      LocationCounty: resolvedCounty,
+      locationSubCuonty: resolvedSubCounty,
+      locationvilage: resolvedVillage,
+      personOneName: String(personOneName||'').trim(), personOneGender: String(personOneGender||'').toLowerCase(), personOneRelationship: String(personOneRelationship||'').trim(), personOnePhone: p1Phone, personOneEmail: p1Email,
+      personTwoName: String(personTwoName||'').trim(), personTwoGender: String(personTwoGender||'').toLowerCase(), personTwoRelationship: String(personTwoRelationship||'').trim(), personTwoPhone: p2Phone, personTwoEmail: p2Email,
       passwordHash,
       memberIndex: null, // memberIndex value should not be updated yet
       emailVerified: false,
@@ -128,23 +136,29 @@ router.post("/api/auth/register", registerBlock, async (req, res) => {
           existing.name = fullName;
           existing.passwordHash = passwordHash;
           if (cleanPhone) existing.phone = cleanPhone;
-          if (dob) existing.dob = dob;
+          if (rawDob) existing.dateOfBirth = rawDob;
           if (gender) existing.gender = gender;
-          if (location) existing.location = location;
-          if (contacts) existing.contacts = contacts;
+          if (resolvedCounty) existing.LocationCounty = resolvedCounty;
+          if (resolvedSubCounty) existing.locationSubCuonty = resolvedSubCounty;
+          if (resolvedVillage) existing.locationvilage = resolvedVillage;
+          existing.personOneName = String(personOneName||'').trim(); existing.personOneGender = String(personOneGender||'').toLowerCase(); existing.personOneRelationship = String(personOneRelationship||'').trim(); existing.personOnePhone = p1Phone; existing.personOneEmail = p1Email;
+          existing.personTwoName = String(personTwoName||'').trim(); existing.personTwoGender = String(personTwoGender||'').toLowerCase(); existing.personTwoRelationship = String(personTwoRelationship||'').trim(); existing.personTwoPhone = p2Phone; existing.personTwoEmail = p2Email;
           existing.registrationTime = new Date();
           // memberIndex value should not be updated yet
           await existing.save();
           userDoc = existing;
         } else {
           userDoc = await Register.create({
-            name: fullName,
-            email: cleanEmail,
             phone: cleanPhone || "+254700000000",
-            dob,
+            email: cleanEmail,
+            name: displayName,
+            dateOfBirth: rawDob,
             gender,
-            location,
-            contacts,
+            LocationCounty: resolvedCounty,
+            locationSubCuonty: resolvedSubCounty,
+            locationvilage: resolvedVillage,
+            personOneName: String(personOneName||'').trim(), personOneGender: String(personOneGender||'').toLowerCase(), personOneRelationship: String(personOneRelationship||'').trim(), personOnePhone: p1Phone, personOneEmail: p1Email,
+            personTwoName: String(personTwoName||'').trim(), personTwoGender: String(personTwoGender||'').toLowerCase(), personTwoRelationship: String(personTwoRelationship||'').trim(), personTwoPhone: p2Phone, personTwoEmail: p2Email,
             passwordHash,
             memberIndex: null, // memberIndex value should not be updated yet
             emailVerified: false,

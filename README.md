@@ -80,63 +80,80 @@ chama/                                    ←  project root
 ├── .gitignore
 ├── README.md                             ←  THIS FILE (full docs)
 │
-├── config/                               ←  HOW Express / Mongo / sessions are wired
+├── config/                               ←  HOW Express / Mongo / Redis are wired
 │   ├── app.js                            ←  builds the express() app (body parser, static, views, hbs, sessions, userLocals)
 │   ├── hbs.js                            ←  Handlebars engine + helpers (via utils/formatters.js)
 │   ├── session.js                        ←  express-session config (cookie, secret, maxAge)
-│   └── db.js                             ←  Mongoose connection (connectDB, exports mongoose instance)
+│   ├── db.js                             ←  Mongoose connection (connectDB, auto-reconnect)
+│   └── redis.js                          ←  Redis client connection for session/caching
 │
 ├── routes/                               ←  WHICH URL → WHICH controller handler
 │   ├── home.js                           ←  GET "/" → homeController.showHome
-│   ├── auth.js                           ←  GET/POST /login, GET/POST /register, GET /logout
-│   └── dashboard.js                      ←  GET "/dashboard" (guarded by authGuard middleware)
+│   ├── logauth.js                        ←  Web UI auth: GET /login, GET /register, GET /logout
+│   ├── authRoutes.js                     ←  API Auth (/auth): POST /register, POST /login, POST /send-code, POST /verify-code, POST /verify-email, POST /verify-phone, GET /status
+│   ├── apiAuth.js                        ←  Legacy Auth API (/api/auth): POST /register, POST /login, check endpoints
+│   ├── kycRoutes.js                      ←  KYC Uploads (/kyc): POST /passport-photo, POST /national-id
+│   ├── dashboard.js                      ←  GET "/dashboard" (guarded by authGuard middleware)
+│   └── verify.js                         ←  GET "/verify" onboarding status and verification page
 │
 ├── controllers/                          ←  CODE that runs for a route (read req, write res)
 │   ├── homeController.js                 ←  showHome(): renders views/home.hbs
-│   ├── authController.js                 ←  showLogin / handleLogin / showRegister / handleRegister / handleLogout
+│   ├── authController.js                 ←  register, login, sendCode, verifyCode, verifyEmail, verifyPhone, resendCode, getStatus
+│   ├── kycController.js                  ←  uploadPassportPhoto, uploadNationalId
 │   └── dashboardController.js            ←  showDashboard(): assembles stats + txns + members, then renders dashboard.hbs
 │
 ├── middlewares/                          ←  Functions that run BETWEEN routes (pipeline stages)
+│   ├── trafficLimiter.js                 ←  registerBlock, loginBlock: rate limiting & anti-abuse checks
+│   ├── authMiddleware.js                 ←  authenticate: JWT token verification; generateToken: creates JWTs
+│   ├── uploadMiddleware.js               ←  Multer configuration for KYC documents and passport images
 │   ├── userLocals.js                     ←  GLOBAL: sets res.locals.user = req.session.user for templates
 │   └── authGuard.js                      ←  ROUTE-LEVEL: blocks unauthenticated requests to /dashboard, redirects → /login
 │
 ├── models/                               ←  Mongoose schemas (what a record looks like in MongoDB)
-│   ├── index.js                          ←  Barrel: re-exports all 5 models in one require()
-│   ├── User.js                           ←  name, email, passwordHash, group, role, phone, timestamps
+│   ├── register.js                       ←  Schema for 'pendingverifiedaccount' (LocationCounty, locationSubCuonty, locationvilage, personOne/personTwo contacts, KYC status)
+│   ├── User.js                           ←  Points to 'pendingverifiedaccount' (re-exports register.js)
+│   ├── VerificationCode.js               ←  Stores hashed OTP verification codes with expiry & attempt limits
 │   ├── Group.js                          ←  name, contribution, meeting schedule, officials refs, member refs
 │   ├── Transaction.js                    ←  deposit / withdrawal / fee with group/user/loan refs
 │   ├── Loan.js                           ←  principal, interest, balance, due date, status enum
-│   └── Contribution.js                   ←  per-member per-period (e.g. "2026-09") due vs paid
+│   ├── Contribution.js                   ←  per-member per-period due vs paid
+│   └── index.js                          ←  Barrel: re-exports all models in one require()
 │
-├── services/                             ←  "Where does the data come from?" layer
-│   └── chamaData.js                      ←  buildDemoUser(), dashboardStats(), recentTransactions(), groupMembers()
-│                                           (currently hard-coded samples; swap each fn for a Mongoose query later)
+├── services/                             ←  Data & verification providers
+│   ├── emailService.js                   ←  sendEmailVerificationOTP(): dispatches 6-digit email OTPs
+│   ├── smsService.js                     ←  sendSMSVerificationOTP(): dispatches 6-digit SMS OTPs
+│   └── kycValidation.js                  ←  Validates passport photos, liveness data, and Kenyan National ID scans
 │
 ├── utils/                                ←  Pure helper functions (no side effects)
+│   ├── phoneNormalizer.js                ←  normalizeKenyanPhone(), isValidKenyanPhone(): standardizes +254 numbers
+│   ├── kenyaCounties.js                  ←  KENYA_COUNTIES list of 47 Kenyan counties
 │   └── formatters.js                     ←  gt(), eq(), initial(), emailName(), formatKES(), signedKES()
-│                                           used by: Handlebars templates (as helpers) + controllers
 │
 ├── views/                                ←  Handlebars .hbs templates
 │   ├── layouts/
-│   │   └── main.hbs                      ←  DEFAULT layout — header + {{{body}}} + footer.  Every page wraps with this.
-│   ├── partials/                         ←  Reusable snippets ({{> _name}})
-│   │   └── README.txt                    ←  "how to add partials" guide
+│   │   ├── main.hbs                      ←  DEFAULT layout — header + {{{body}}} + footer
+│   │   └── dashboard.hbs                 ←  Dashboard-specific layout wrapper
 │   ├── home.hbs                          ←  Landing page (hero + 3 features + CTA banner)
-│   ├── login.hbs                         ←  DUAL: renders login OR register depending on {{#if isRegister}}
-│   └── dashboard.hbs                     ←  4 stat cards + transactions + upcoming sidebar + members table
+│   ├── login.hbs                         ←  Personal account login + OTP verification + ID review
+│   ├── register.hbs                      ←  5-step registration wizard (personal, location, personOne/Two, password, review)
+│   ├── verify.hbs                        ←  Identity & document verification interface
+│   ├── dashboard.hbs                     ←  4 stat cards + transactions + upcoming sidebar + members table
+│   └── tests.hbs                         ←  In-browser test runner & security verification suite
 │
-├── public/                               ←  Served literally via express.static()
-│   ├── login.js                          ←  (legacy) client-side JS at /login.js
-│   ├── css/
-│   │   └── login.css                     ←  Auth card styles + layout primitives + badge classes + table styles
-│   └── js/
-│       └── login.js                      ←  (legacy) client-side JS at /js/login.js
+├── public/                               ←  Static assets served via express.static()
+│   ├── register.html                     ←  Standalone registration interface matching flat location/contacts schema
+│   ├── js/
+│   │   └── capture.js                    ←  Browser webcam capture, face liveness, and document image processing
+│   └── css/
+│       └── login.css                     ←  Auth card styles + layout primitives + badge classes
 │
-├── work-record/                          ←  Day-by-day dev log
-│   └── README.md                         ←  Task checklist, completed items, next steps
+├── tests/                                ←  Test suite & integration verifiers
+│   ├── testRegistrationValidation.js     ←  Validates registration field normalization, anti-collision, & schema rules
+│   ├── testLoginInjection.js             ←  Tests security defenses against injection, mass-assignment, and tampering
+│   └── testViewer.js                     ←  Routes for in-browser visual test suite (/tests)
 │
-└── login-app/                            ←  SEPARATE React + TS + Vite project (NOT wired to Express)
-    └── (its own package.json, vite.config, src/, etc.)
+└── docs/                                 ←  Documentation
+    └── README.md                         ←  Work record & development log
 ```
 
 ---
@@ -237,52 +254,81 @@ Exports:
 ## `routes/` — URL → controller wiring
 
 *"What URL maps to what function?"*
-Each file is a single `express.Router()` that lists HTTP verbs + paths and calls a controller. **No business logic lives here.**
+Each file is an `express.Router()` that declares HTTP verbs + paths and routes requests through middlewares and controllers.
 
 ### `routes/home.js`
 ```
 GET /  →  homeController.showHome
 ```
 
-### `routes/auth.js`
+### `routes/logauth.js` (Web Interface Auth)
+Handles browser navigation for authentication views:
 ```
-GET  /login     → authController.showLogin
-POST /login     → authController.handleLogin
-GET  /register  → authController.showRegister
-POST /register  → authController.handleRegister
-GET  /logout    → authController.handleLogout
+GET /login     → Renders login.hbs (step-by-step account login and verification review)
+GET /register  → Renders register.hbs (5-step registration wizard)
+GET /logout    → Clears session cookies and redirects to /login
+```
+
+### `routes/authRoutes.js` (JWT Auth API — mounted at `/auth`)
+Protected by rate limiting (`registerBlock`, `loginBlock`) and token authentication (`authenticate`):
+```
+POST /auth/register      → authController.register (creates/upserts pendingverifiedaccount record)
+POST /auth/login         → authController.login (authenticates credentials, returns onboarding token)
+GET  /auth/counties      → Returns list of 47 Kenyan counties from kenyaCounties.js
+POST /auth/send-code     → authController.sendCode (dispatches SMS/email 6-digit OTP)
+POST /auth/verify-code   → authController.verifyCode (validates submitted OTP)
+POST /auth/verify-email  → authController.verifyEmail (marks email as verified)
+POST /auth/verify-phone  → authController.verifyPhone (marks phone as verified)
+POST /auth/resend-code   → authController.resendCode (re-dispatches OTP subject to 60s cooldown)
+GET  /auth/status        → authController.getStatus (returns account status & next onboarding step)
+```
+
+### `routes/apiAuth.js` (Legacy API Endpoints)
+Provides backward compatibility for multi-step onboarding and sanity check endpoints:
+```
+POST /api/auth/register            → Validates personal info, flat location, contacts, saves to pendingverifiedaccount
+POST /api/auth/login               → Authenticates user and initiates OTP dispatch
+POST /api/auth/check-personal-info → Pre-validates email and phone uniqueness before advancing steps
+```
+
+### `routes/kycRoutes.js` (KYC Document Uploads — mounted at `/kyc`)
+Upload pipeline using Multer:
+```
+POST /kyc/passport-photo  → upload.single("passportPhoto") → kycController.uploadPassportPhoto
+POST /kyc/national-id     → upload.fields([front, back])   → kycController.uploadNationalId
 ```
 
 ### `routes/dashboard.js`
-Notice the **2nd arg** to `router.get`:
 ```
-GET /dashboard  → authGuard middleware (CHECK) → dashboardController.showDashboard
+GET /dashboard  → authGuard middleware → dashboardController.showDashboard
 ```
-If `req.session.user` is missing, `authGuard` redirects to `/login` and the controller never runs.
 
 ---
 
 ## `controllers/` — Route handlers / "business logic glue"
 
-Controllers live between routes (which know *what URL*) and models/services (which know *where data is from*).
-**Rule:** they don't do DB queries directly — they call services/models.
-**Signature:** `(req, res) => { ... res.render(...) or res.redirect(...) }`
+Controllers live between routes and models/services. They validate payloads, coordinate services, and return responses.
 
 ### `controllers/homeController.js`
-- **`showHome(req, res)`** — simplest controller. `res.render("home", { title: "Home" })`. Wraps with `layouts/main.hbs` automatically.
+- **`showHome(req, res)`** — Renders landing page `views/home.hbs`.
 
 ### `controllers/authController.js`
-Five handlers. All currently **demo-mode** (no DB lookups, no bcrypt):
+Implements full production authentication, validation, hashing, OTP workflows, and status tracking:
 
-| Handler             | What it does                                                                |
-| ------------------- | --------------------------------------------------------------------------- |
-| `showLogin`         | If already logged in → skips to /dashboard. Else → renders `login.hbs`.    |
-| `handleLogin`       | Reads `{email,password}` from form. Ignores password; sets session to Jane Mwangi + the email entered. Redirects /dashboard. |
-| `showRegister`      | Skips if logged in; else renders `login.hbs` with `isRegister:true` flag.  |
-| `handleRegister`    | Sets session directly from form fields (`name,email,group`). Role = Member. Redirects /dashboard. |
-| `handleLogout`      | `req.session.destroy()` → redirect `/`.                                     |
+| Function | Route / Action | Description |
+| -------- | -------------- | ----------- |
+| `register(req, res)` | `POST /auth/register` | Validates full name (min 2 words), email regex, Kenyan phone normalizer (+254), age 18+, flat location (`LocationCounty`, `locationSubCuonty`, `locationvilage`), and two distinct contacts (`personOne...`, `personTwo...`). Hashes password with bcrypt (cost 12), upserts to `pendingverifiedaccount` collection, and issues an onboarding JWT token. |
+| `login(req, res)` | `POST /auth/login` | Authenticates user credentials via bcrypt, checks onboarding stage, issues scoped JWT, and returns `nextStep` (5: Email, 6: Phone, 7: Documents, 9: Active). |
+| `sendCode(req, res)` | `POST /auth/send-code` | Generates cryptographically secure 6-digit OTP, stores SHA-256 hash in `VerificationCode` model with 10-minute expiry and 60s cooldown, dispatches via `sendEmailVerificationOTP` or `sendSMSVerificationOTP`. |
+| `verifyCode(req, res)` | `POST /auth/verify-code` | Verifies candidate OTP against SHA-256 hash, tracks remaining attempts (max 3), updates verified status in `pendingverifiedaccount`. |
+| `verifyEmail(req, res)` | `POST /auth/verify-email` | Validates email code and marks `emailVerified = true`. |
+| `verifyPhone(req, res)` | `POST /auth/verify-phone` | Validates phone code and marks `phoneVerified = true`. |
+| `resendCode(req, res)` | `POST /auth/resend-code` | Enforces 60-second anti-flood cooldown before issuing replacement OTP. |
+| `getStatus(req, res)` | `GET /auth/status` | Inspects user account state and determines current KYC / activation progress. |
 
-**TODO (prod):** `handleLogin` → `User.findOne({email}) + bcrypt.compare`. `handleRegister` → `bcrypt.hash + User.create(...) + store user._id only`.
+### `controllers/kycController.js`
+- **`uploadPassportPhoto(req, res)`** — Validates uploaded portrait, evaluates face properties and liveness report, saves document link to pending user profile.
+- **`uploadNationalId(req, res)`** — Processes front and back scans of Kenyan National ID, runs document quality inspection, saves OCR-confirmed identity attributes.
 
 ### `controllers/dashboardController.js`
 - **`showDashboard(req, res)`** — Assembles the three dashboard data groups:
@@ -331,13 +377,15 @@ const { User, Group, Transaction, Loan, Contribution } = require("../models");
 
 ### Individual Models
 
-| File               | Key fields                                                                 | Used by dashboard for... |
-| ------------------ | -------------------------------------------------------------------------- | ------------------------ |
-| `User.js`          | name, email, passwordHash, group, role (`Member/Treasurer/...`), phone    | Greeting line, members table |
-| `Group.js`         | name, monthlyContribution, meetingDay/Location, yearlyGoal, officials[chair/treas/sec], members[], status | Month target, yearly progress |
-| `Transaction.js`   | group FK, date, type (`Deposit/Withdrawal/Fee/Interest/MerryGoRound`), amount, description, by, member FK, relatedLoan FK | Transactions table |
-| `Loan.js`          | group FK, borrower FK, principal, interestRate, totalOwed, balanceOutstanding, disbDate, dueDate, purpose, status enum | Loans stat cards |
-| `Contribution.js`  | group FK, member FK, period ("2026-09"), dueDate, expected vs paid amount, status enum, paidAt | Monthly progress bar, "this month" KPI |
+| File | Collection / Purpose | Key fields |
+| --- | --- | --- |
+| `register.js` | `pendingverifiedaccount` | phone, email, name, dateOfBirth, gender, `LocationCounty`, `locationSubCuonty`, `locationvilage`, `personOne...`, `personTwo...`, passwordHash, registrationTime, documents, identity, status |
+| `User.js` | `pendingverifiedaccount` | Re-exports `register.js` model for compatibility |
+| `VerificationCode.js` | `verificationcodes` | userId, channel, codeHash (SHA-256), expiresAt, attemptsRemaining, resendAvailableAt |
+| `Group.js` | `groups` | name, monthlyContribution, meetingDay/Location, yearlyGoal, officials, members, status |
+| `Transaction.js` | `transactions` | group FK, date, type, amount, description, by, member FK, relatedLoan FK |
+| `Loan.js` | `loans` | group FK, borrower FK, principal, interestRate, totalOwed, balanceOutstanding, status |
+| `Contribution.js` | `contributions` | group FK, member FK, period, dueDate, expected vs paid amount, status |
 
 ---
 

@@ -6,9 +6,12 @@ const bcrypt = require("bcrypt");
 
 const registerSchema = new mongoose.Schema(
   {
-    name: {
+    phone: {
       type: String,
+      required: true,
+      unique: true,
       trim: true,
+      index: true,
     },
     email: {
       type: String,
@@ -18,36 +21,41 @@ const registerSchema = new mongoose.Schema(
       trim: true,
       index: true,
     },
-    phone: {
+    name: {
       type: String,
-      required: true,
-      unique: true,
       trim: true,
-      index: true,
     },
-    dob: {
+    dateOfBirth: {
       type: String,
       trim: true,
+      alias: "dob",
     },
     gender: {
       type: String,
       trim: true,
     },
-    location: {
-      county: { type: String, trim: true },
-      subCounty: { type: String, trim: true },
-      town: { type: String, trim: true },
-      street: { type: String, trim: true },
+    LocationCounty: {
+      type: String,
+      trim: true,
     },
-    contacts: [
-      {
-        name: { type: String, trim: true },
-        gender: { type: String, trim: true },
-        relationship: { type: String, trim: true },
-        phone: { type: String, trim: true },
-        email: { type: String, trim: true },
-      },
-    ],
+    locationSubCuonty: {
+      type: String,
+      trim: true,
+    },
+    locationvilage: {
+      type: String,
+      trim: true,
+    },
+    personOneName: { type: String, trim: true },
+    personOneGender: { type: String, trim: true },
+    personOneRelationship: { type: String, trim: true },
+    personOnePhone: { type: String, trim: true },
+    personOneEmail: { type: String, trim: true },
+    personTwoName: { type: String, trim: true },
+    personTwoGender: { type: String, trim: true },
+    personTwoRelationship: { type: String, trim: true },
+    personTwoPhone: { type: String, trim: true },
+    personTwoEmail: { type: String, trim: true },
     passwordHash: {
       type: String,
       required: true,
@@ -57,13 +65,6 @@ const registerSchema = new mongoose.Schema(
       type: Number,
       sparse: true,
       default: null,
-    },
-    registrationTime: {
-      type: Date,
-      default: Date.now,
-    },
-    pinkey: {
-      type: String,
     },
     emailVerified: {
       type: Boolean,
@@ -76,6 +77,17 @@ const registerSchema = new mongoose.Schema(
     kycCompleted: {
       type: Boolean,
       default: false,
+    },
+    status: {
+      type: String,
+      default: "PENDING_VERIFICATION",
+    },
+    registrationTime: {
+      type: Date,
+      default: Date.now,
+    },
+    pinkey: {
+      type: String,
     },
     passportPhoto: {
       type: String,
@@ -104,16 +116,17 @@ const registerSchema = new mongoose.Schema(
       block: { type: String, trim: true },
       confirmedAt: { type: Date },
     },
-    status: {
-      type: String,
-      default: "PENDING_VERIFICATION",
-    },
   },
   {
-    timestamps: true, // auto-generates & updates createdAt, updatedAt
+    timestamps: { createdAt: false, updatedAt: true },
     collection: "pendingverifiedaccount",
   }
 );
+
+// Virtual aliases for date of birth
+registerSchema.virtual('dateofBirth')
+  .get(function () { return this.dateOfBirth; })
+  .set(function (val) { this.dateOfBirth = val; });
 
 registerSchema.pre("validate", function (next) {
   if (Array.isArray(this.contacts) && this.contacts.length > 0) {

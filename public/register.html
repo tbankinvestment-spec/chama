@@ -68,19 +68,39 @@
     <section class="step" data-step="location">
       <h2>Your Location</h2>
       <div class="row">
-        <div><label for="county">County</label><input id="county"></div>
-        <div><label for="subCounty">Sub County</label><input id="subCounty"></div>
+        <div><label for="LocationCounty">County</label><input id="LocationCounty"></div>
+        <div><label for="locationSubCuonty">Sub County</label><input id="locationSubCuonty"></div>
       </div>
       <div class="row">
-        <div><label for="town">Town</label><input id="town"></div>
-        <div><label for="street">Road/Street</label><input id="street"></div>
+        <div><label for="locationvilage">Town/Village</label><input id="locationvilage"></div>
       </div>
     </section>
 
     <!-- 3. Close persons of contact -->
     <section class="step" data-step="contacts">
-      <h2>Close Persons of Contact</h2>
-      <div id="contacts"></div>
+      <h2>Close Persons Contact</h2>
+
+      <h3>Person One</h3>
+      <div class="row">
+        <div><label for="personOneName">Full Name</label><input id="personOneName" type="text"></div>
+        <div><label for="personOneGender">Gender</label><select id="personOneGender"><option value="">Select…</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+      </div>
+      <div class="row">
+        <div><label for="personOneRelationship">Relationship</label><input id="personOneRelationship" type="text"></div>
+        <div><label for="personOnePhone">Phone</label><input id="personOnePhone" type="tel"></div>
+      </div>
+      <div><label for="personOneEmail">Email</label><input id="personOneEmail" type="email"></div>
+
+      <h3 style="margin-top: 18px;">Person Two</h3>
+      <div class="row">
+        <div><label for="personTwoName">Full Name</label><input id="personTwoName" type="text"></div>
+        <div><label for="personTwoGender">Gender</label><select id="personTwoGender"><option value="">Select…</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+      </div>
+      <div class="row">
+        <div><label for="personTwoRelationship">Relationship</label><input id="personTwoRelationship" type="text"></div>
+        <div><label for="personTwoPhone">Phone</label><input id="personTwoPhone" type="tel"></div>
+      </div>
+      <div><label for="personTwoEmail">Email</label><input id="personTwoEmail" type="email"></div>
     </section>
 
     <!-- 4. Create password -->
@@ -145,13 +165,6 @@ const phoneRx = /^(?:\+254|0)[17]\d{8}$/;
 const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 let cur = 0, token = sessionStorage.getItem('chama_token') || '';
 
-// Build the two contact-person blocks
-const fields = [['Full Name','name','text'],['Gender','gender','select'],['Relationship','relationship','text'],
-  ['Phone Number','phone','tel'],['Confirm Phone Number','phone2','tel'],['Email Address','email','email'],['Confirm Email Address','email2','email']];
-$('contacts').innerHTML = ['One','Two'].map((n,i) => `<h3>Person ${n}</h3><div class="row">` + fields.map(([l,k,t]) =>
-  `<div><label for="c${i}_${k}">${l}</label>` + (t==='select'
-    ? `<select id="c${i}_${k}"><option value="">Select…</option><option>Male</option><option>Female</option><option>Other</option></select>`
-    : `<input id="c${i}_${k}" type="${t}">`) + `</div>`).join('') + `</div>`).join('');
 
 const v = id => $(id).value.trim();
 const normPhone = p => p.replace(/^0/, '+254');
@@ -171,36 +184,25 @@ const validators = {
     return '';
   },
   location() {
-    return ['county','subCounty','town','street'].every(k => v(k)) ? '' : 'Fill in all location fields.';
+    return ['LocationCounty','locationSubCuonty','locationvilage'].every(k => v(k)) ? '' : 'Fill in all location fields.';
   },
   contacts() {
     const ownerPhone = normPhone(v('phone'));
     const ownerEmail = v('email').toLowerCase();
-
-    for (let i = 0; i < 2; i++) {
-      const g = k => v(`c${i}_${k}`), who = `Person ${i ? 'Two' : 'One'}`;
-      if (!g('name') || !g('gender') || !g('relationship')) return `${who}: complete name, gender and relationship.`;
-      if (!phoneRx.test(g('phone'))) return `${who}: enter a valid phone number.`;
-      if (g('phone') !== g('phone2')) return `${who}: phone numbers do not match.`;
-      if (!emailRx.test(g('email'))) return `${who}: enter a valid email.`;
-      if (g('email').toLowerCase() !== g('email2').toLowerCase()) return `${who}: email addresses do not match.`;
-
-      if (normPhone(g('phone')) === ownerPhone) {
-        return `${who} cannot have the same phone number as the account owner.`;
-      }
-      if (g('email').toLowerCase() === ownerEmail) {
-        return `${who} cannot have the same email address as the account owner.`;
-      }
-    }
-
-    if (normPhone(v('c0_phone')) === normPhone(v('c1_phone'))) {
-      return 'Person One and Person Two cannot have matching phone numbers.';
-    }
-
-    if (v('c0_email').toLowerCase() === v('c1_email').toLowerCase()) {
-      return 'Person One and Person Two cannot have matching email addresses.';
-    }
-
+    if (!v('personOneName') || !v('personOneGender') || !v('personOneRelationship')) return 'Person One: fill in name, gender and relationship.';
+    if (!v('personTwoName') || !v('personTwoGender') || !v('personTwoRelationship')) return 'Person Two: fill in name, gender and relationship.';
+    const p1Phone = normPhone(v('personOnePhone'));
+    if (!phoneRx.test(v('personOnePhone'))) return 'Person One: enter a valid phone number.';
+    if (p1Phone === ownerPhone) return 'Person One phone cannot match your phone number.';
+    const p2Phone = normPhone(v('personTwoPhone'));
+    if (!phoneRx.test(v('personTwoPhone'))) return 'Person Two: enter a valid phone number.';
+    if (p2Phone === ownerPhone) return 'Person Two phone cannot match your phone number.';
+    if (p1Phone === p2Phone) return 'Person One and Person Two cannot share the same phone number.';
+    if (!emailRx.test(v('personOneEmail'))) return 'Person One: enter a valid email address.';
+    if (v('personOneEmail').toLowerCase() === ownerEmail) return 'Person One email cannot match your email address.';
+    if (!emailRx.test(v('personTwoEmail'))) return 'Person Two: enter a valid email address.';
+    if (v('personTwoEmail').toLowerCase() === ownerEmail) return 'Person Two email cannot match your email address.';
+    if (v('personOneEmail').toLowerCase() === v('personTwoEmail').toLowerCase()) return 'Person One and Person Two cannot share the same email address.';
     return '';
   },
   password() {
@@ -237,9 +239,13 @@ const submitters = {
     await api('/register', {
       fullName: v('fullName'), dob: v('dob'), gender: v('gender'),
       phone: normPhone(v('phone')), email: v('email').toLowerCase(),
-      location: { county: v('county'), subCounty: v('subCounty'), town: v('town'), street: v('street') },
-      contacts: [0,1].map(i => ({ name: v(`c${i}_name`), gender: v(`c${i}_gender`), relationship: v(`c${i}_relationship`),
-        phone: normPhone(v(`c${i}_phone`)), email: v(`c${i}_email`).toLowerCase() })),
+      LocationCounty: v('LocationCounty'),
+      locationSubCuonty: v('locationSubCuonty'),
+      locationvilage: v('locationvilage'),
+      personOneName: v('personOneName'), personOneGender: v('personOneGender'), personOneRelationship: v('personOneRelationship'),
+      personOnePhone: normPhone(v('personOnePhone')), personOneEmail: v('personOneEmail').toLowerCase(),
+      personTwoName: v('personTwoName'), personTwoGender: v('personTwoGender'), personTwoRelationship: v('personTwoRelationship'),
+      personTwoPhone: normPhone(v('personTwoPhone')), personTwoEmail: v('personTwoEmail').toLowerCase(),
       password: $('pw').value
     });
     $('loginEmail').value = v('email');

@@ -63,11 +63,32 @@ async function register(req, res) {
       email,
       phone,
       dob,
+      dateOfBirth,
+      dateofBirth,
       gender,
+      LocationCounty,
+      locationCounty,
+      locationSubCuonty,
+      locationSubCounty,
+      locationvilage,
+      locationVillage,
       location,
-      contacts,
+      personOneName,
+      personOneGender,
+      personOneRelationship,
+      personOnePhone,
+      personOneEmail,
+      personTwoName,
+      personTwoGender,
+      personTwoRelationship,
+      personTwoPhone,
+      personTwoEmail,
       password,
     } = req.body;
+
+    const resolvedCounty = String(LocationCounty || locationCounty || (location && location.county) || '').trim();
+    const resolvedSubCounty = String(locationSubCuonty || locationSubCounty || (location && location.subCounty) || '').trim();
+    const resolvedVillage = String(locationvilage || locationVillage || (location && (location.town || location.village)) || '').trim();
 
     // 1. Validate required fields (single canonical 'name' field)
     const displayName = String(name || fullName || '').trim();
@@ -86,11 +107,12 @@ async function register(req, res) {
     }
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (!phone || !dob || !gender) {
+    const rawDob = String(dateOfBirth || dob || dateofBirth || '').trim();
+    if (!phone || !rawDob || !gender) {
       return res.status(400).json({ success: false, message: 'All personal information fields are required.' });
     }
 
-    if (!location || !location.county || !location.subCounty || !location.town || !location.street) {
+    if (!resolvedCounty || !resolvedSubCounty || !resolvedVillage) {
       return res.status(400).json({ success: false, message: 'All location fields are required.' });
     }
 
@@ -99,11 +121,11 @@ async function register(req, res) {
     }
 
     // 2. Validate Age (minimum 18)
-    const dateOfBirth = new Date(dob);
-    if (isNaN(dateOfBirth.getTime())) {
+    const parsedDob = new Date(rawDob);
+    if (isNaN(parsedDob.getTime())) {
       return res.status(400).json({ success: false, message: 'Invalid date of birth.' });
     }
-    const ageDiffMs = Date.now() - dateOfBirth.getTime();
+    const ageDiffMs = Date.now() - parsedDob.getTime();
     const ageDate = new Date(ageDiffMs);
     const age = Math.abs(ageDate.getUTCFullYear() - 1970);
     if (age < 18) {
@@ -116,64 +138,31 @@ async function register(req, res) {
       return res.status(400).json({ success: false, message: 'Invalid Kenyan phone number format. Use 07XXXXXXXX or 01XXXXXXXX.' });
     }
 
-    // 4. Validate Contacts (must be exactly 2 with unique phones and emails)
-    if (!Array.isArray(contacts) || contacts.length !== 2) {
-      return res.status(400).json({ success: false, message: 'Exactly two close persons of contact are required.' });
+    // 4. Validate Person One and Person Two contact fields
+    if (!personOneName || !personOneGender || !personOneRelationship) {
+      return res.status(400).json({ success: false, message: 'Person One: name, gender and relationship are required.' });
+    }
+    if (!personTwoName || !personTwoGender || !personTwoRelationship) {
+      return res.status(400).json({ success: false, message: 'Person Two: name, gender and relationship are required.' });
     }
 
-    const normalizedContacts = [];
-    for (let i = 0; i < contacts.length; i++) {
-      const contact = contacts[i];
-      if (!contact.name || !contact.gender || !contact.relationship) {
-        return res.status(400).json({
-          success: false,
-          message: `Contact #${i + 1}: complete name, gender and relationship.`,
-        });
-      }
-      const contactPhone = normalizeKenyanPhone(contact.phone);
-      if (!contactPhone) {
-        return res.status(400).json({
-          success: false,
-          message: `Contact #${i + 1} has an invalid Kenyan phone number format.`,
-        });
-      }
-      if (contactPhone === normalizedPhone) {
-        return res.status(400).json({
-          success: false,
-          message: `Contact #${i + 1} phone number cannot match the account owner's phone number.`,
-        });
-      }
+    const normPersonOnePhone = normalizeKenyanPhone(personOnePhone);
+    if (!normPersonOnePhone) return res.status(400).json({ success: false, message: 'Person One has an invalid Kenyan phone number.' });
+    if (normPersonOnePhone === normalizedPhone) return res.status(400).json({ success: false, message: 'Person One phone cannot match your phone number.' });
 
-      if (!contact.email || typeof contact.email !== 'string' || !EMAIL_REGEX.test(contact.email.trim())) {
-        return res.status(400).json({
-          success: false,
-          message: `Contact #${i + 1} has an invalid email address format.`,
-        });
-      }
-      const contactEmail = contact.email.toLowerCase().trim();
-      if (contactEmail === normalizedEmail) {
-        return res.status(400).json({
-          success: false,
-          message: `Contact #${i + 1} email address cannot match the account owner's email address.`,
-        });
-      }
+    const normPersonTwoPhone = normalizeKenyanPhone(personTwoPhone);
+    if (!normPersonTwoPhone) return res.status(400).json({ success: false, message: 'Person Two has an invalid Kenyan phone number.' });
+    if (normPersonTwoPhone === normalizedPhone) return res.status(400).json({ success: false, message: 'Person Two phone cannot match your phone number.' });
+    if (normPersonOnePhone === normPersonTwoPhone) return res.status(400).json({ success: false, message: 'Person One and Person Two cannot share the same phone number.' });
 
-      normalizedContacts.push({
-        name: contact.name.trim(),
-        gender: contact.gender.toLowerCase(),
-        relationship: contact.relationship.trim(),
-        phone: contactPhone,
-        email: contactEmail,
-      });
-    }
+    if (!personOneEmail || !EMAIL_REGEX.test(personOneEmail.trim())) return res.status(400).json({ success: false, message: 'Person One has an invalid email address.' });
+    const normPersonOneEmail = personOneEmail.toLowerCase().trim();
+    if (normPersonOneEmail === normalizedEmail) return res.status(400).json({ success: false, message: 'Person One email cannot match your email address.' });
 
-    if (normalizedContacts[0].phone === normalizedContacts[1].phone) {
-      return res.status(400).json({ success: false, message: 'The two contacts need different phone numbers.' });
-    }
-
-    if (normalizedContacts[0].email === normalizedContacts[1].email) {
-      return res.status(400).json({ success: false, message: 'The two contacts need different email addresses.' });
-    }
+    if (!personTwoEmail || !EMAIL_REGEX.test(personTwoEmail.trim())) return res.status(400).json({ success: false, message: 'Person Two has an invalid email address.' });
+    const normPersonTwoEmail = personTwoEmail.toLowerCase().trim();
+    if (normPersonTwoEmail === normalizedEmail) return res.status(400).json({ success: false, message: 'Person Two email cannot match your email address.' });
+    if (normPersonOneEmail === normPersonTwoEmail) return res.status(400).json({ success: false, message: 'Person One and Person Two cannot share the same email address.' });
 
     
     // Hash password (bcrypt cost 12)
@@ -203,20 +192,31 @@ async function register(req, res) {
     }
 
     const registrationFields = {
-      name: displayName,
-      email: normalizedEmail,
       phone: normalizedPhone,
-      dateOfBirth,
-      dob,
+      email: normalizedEmail,
+      name: displayName,
+      dateOfBirth: rawDob,
       gender: gender.toLowerCase(),
-      location: {
-        county: location.county,
-        subCounty: location.subCounty,
-        town: location.town,
-        street: location.street,
-      },
-      contacts: normalizedContacts,
+      LocationCounty: resolvedCounty,
+      locationSubCuonty: resolvedSubCounty,
+      locationvilage: resolvedVillage,
+      personOneName: personOneName.trim(),
+      personOneGender: personOneGender.toLowerCase(),
+      personOneRelationship: personOneRelationship.trim(),
+      personOnePhone: normPersonOnePhone,
+      personOneEmail: normPersonOneEmail,
+      personTwoName: personTwoName.trim(),
+      personTwoGender: personTwoGender.toLowerCase(),
+      personTwoRelationship: personTwoRelationship.trim(),
+      personTwoPhone: normPersonTwoPhone,
+      personTwoEmail: normPersonTwoEmail,
       passwordHash,
+      memberIndex: null,
+      emailVerified: false,
+      phoneVerified: false,
+      kycCompleted: false,
+      status: 'PENDING_EMAIL',
+      registrationTime: new Date(),
     };
 
     // Upsert into 'pendingverifiedaccount': re-submitting (for example after the
@@ -237,15 +237,9 @@ async function register(req, res) {
       await existingEmail.save();
       newUser = existingEmail;
     } else {
-      newUser = await User.create({
-        ...registrationFields,
-        status: 'PENDING_EMAIL',
-        isEmailVerified: false,
-        isPhoneVerified: false,
-      });
+      newUser = await User.create(registrationFields);
     }
 
-    // 8. Generate scoped onboarding token
     const token = generateToken(newUser, 'onboarding');
 
     return res.status(201).json({

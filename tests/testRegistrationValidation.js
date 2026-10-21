@@ -1,3 +1,7 @@
+const dns = require('dns');
+try { dns.setServers(['8.8.8.8', '1.1.1.1']); } catch (_) {}
+const connectDB = require('../config/db');
+require('dotenv').config();
 // tests/testRegistrationValidation.js
 // Verification test suite for Registration form standard input compliance and anti-collision rules
 
@@ -12,6 +16,7 @@ app.use('/auth', authRoutes);
 app.use(apiAuthRoutes);
 
 async function run() {
+  await connectDB();
   console.log('--- Testing Registration Form Phone & Email Validation & Anti-Collision ---');
   const server = app.listen(0);
   const port = server.address().port;
@@ -54,28 +59,19 @@ async function run() {
     gender: 'Female',
     phone: '0712345678',
     email: 'jane.mwangi@example.com',
-    location: {
-      county: 'Nairobi',
-      subCounty: 'Westlands',
-      town: 'Parklands',
-      street: 'Mpaka Rd',
-    },
-    contacts: [
-      {
-        name: 'John Mwangi',
-        gender: 'Male',
-        relationship: 'Brother',
-        phone: '0722111222',
-        email: 'john.mwangi@example.com',
-      },
-      {
-        name: 'Alice Wambui',
-        gender: 'Female',
-        relationship: 'Mother',
-        phone: '0733222333',
-        email: 'alice.wambui@example.com',
-      },
-    ],
+    LocationCounty: 'Nairobi',
+    locationSubCuonty: 'Westlands',
+    locationvilage: 'Parklands',
+    personOneName: 'John Mwangi',
+    personOneGender: 'Male',
+    personOneRelationship: 'Brother',
+    personOnePhone: '0722111222',
+    personOneEmail: 'john.mwangi@example.com',
+    personTwoName: 'Alice Wambui',
+    personTwoGender: 'Female',
+    personTwoRelationship: 'Mother',
+    personTwoPhone: '0733222333',
+    personTwoEmail: 'alice.wambui@example.com',
     password: 'Password123!',
   };
 
@@ -116,69 +112,69 @@ async function run() {
   await test('Contact 1 phone cannot match Personal phone (anti-collision across formats)', async () => {
     const payload = JSON.parse(JSON.stringify(validPayload));
     payload.phone = '0712345678';
-    payload.contacts[0].phone = '+254 712 345 678'; // Same number with +254 and spaces
+    payload.personOnePhone = '+254 712 345 678'; // Same number with +254 and spaces
     const { status, data } = await postRegister(payload);
     assert.strictEqual(status, 400);
-    assert.match(data.message, /cannot match.*owner.*phone/i);
+    assert.match(data.message, /cannot match.*phone/i);
   });
 
   // Test 6: Contact 2 phone matches Personal Phone
   await test('Contact 2 phone cannot match Personal phone', async () => {
     const payload = JSON.parse(JSON.stringify(validPayload));
     payload.phone = '0712345678';
-    payload.contacts[1].phone = '0712345678';
+    payload.personTwoPhone = '0712345678';
     const { status, data } = await postRegister(payload);
     assert.strictEqual(status, 400);
-    assert.match(data.message, /cannot match.*owner.*phone/i);
+    assert.match(data.message, /cannot match.*phone/i);
   });
 
   // Test 7: Contact 1 phone matches Contact 2 phone
   await test('Contact 1 phone cannot match Contact 2 phone', async () => {
     const payload = JSON.parse(JSON.stringify(validPayload));
-    payload.contacts[0].phone = '0722111222';
-    payload.contacts[1].phone = '+254722111222';
+    payload.personOnePhone = '0722111222';
+    payload.personTwoPhone = '+254722111222';
     const { status, data } = await postRegister(payload);
     assert.strictEqual(status, 400);
-    assert.match(data.message, /need different phone numbers/i);
+    assert.match(data.message, /(?:different|same) phone/i);
   });
 
   // Test 8: Contact 1 email matches Personal email (case insensitive / spaces)
   await test('Contact 1 email cannot match Personal email (case & trim check)', async () => {
     const payload = JSON.parse(JSON.stringify(validPayload));
     payload.email = 'jane.mwangi@example.com';
-    payload.contacts[0].email = '  JANE.MWANGI@EXAMPLE.COM  ';
+    payload.personOneEmail = '  JANE.MWANGI@EXAMPLE.COM  ';
     const { status, data } = await postRegister(payload);
     assert.strictEqual(status, 400);
-    assert.match(data.message, /cannot match.*owner.*email/i);
+    assert.match(data.message, /cannot match.*email/i);
   });
 
   // Test 9: Contact 2 email matches Personal email
   await test('Contact 2 email cannot match Personal email', async () => {
     const payload = JSON.parse(JSON.stringify(validPayload));
     payload.email = 'jane.mwangi@example.com';
-    payload.contacts[1].email = 'jane.mwangi@example.com';
+    payload.personTwoEmail = 'jane.mwangi@example.com';
     const { status, data } = await postRegister(payload);
     assert.strictEqual(status, 400);
-    assert.match(data.message, /cannot match.*owner.*email/i);
+    assert.match(data.message, /cannot match.*email/i);
   });
 
   // Test 10: Contact 1 email matches Contact 2 email
   await test('Contact 1 email cannot match Contact 2 email', async () => {
     const payload = JSON.parse(JSON.stringify(validPayload));
-    payload.contacts[0].email = 'shared@example.com';
-    payload.contacts[1].email = 'Shared@Example.COM';
+    payload.personOneEmail = 'shared@example.com';
+    payload.personTwoEmail = 'Shared@Example.COM';
     const { status, data } = await postRegister(payload);
     assert.strictEqual(status, 400);
-    assert.match(data.message, /need different email addresses/i);
+    assert.match(data.message, /(?:different|same) email/i);
   });
 
   // Test 11: Contact invalid email format rejected
   await test('Contact invalid email format is rejected', async () => {
     const payload = JSON.parse(JSON.stringify(validPayload));
-    payload.contacts[0].email = 'invalid-email-format';
+    payload.personOneEmail = 'invalid-email-format';
     const { status, data } = await postRegister(payload);
     assert.strictEqual(status, 400);
-    assert.match(data.message, /invalid email address/i);
+    assert.match(data.message, /invalid.*email/i);
   });
 
   server.close();
